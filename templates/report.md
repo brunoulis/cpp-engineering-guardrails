@@ -3,6 +3,10 @@
 ## Scope
 Repository/branch/commit, requested change, compiler toolchain/standard, supported platforms and exclusions.
 
+- Libraries touched: exact selected versions/revisions, headers/binaries/build-target evidence and unresolved discrepancies:
+- Version-matched official documentation consulted (URLs or local paths), relevant API/default/deprecation facts:
+- If updating: current → target, task justification, migration notes, compiler/standard-library/ABI/consumer compatibility, checks and rollback:
+
 ## Findings
 | ID | Severity | Confidence | Path | Evidence | Recommendation |
 |---|---|---|---|---|---|

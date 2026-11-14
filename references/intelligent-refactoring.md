@@ -14,4 +14,6 @@ Evidence can include: repeated bugs, duplicated invariants, tight coupling prove
 | Keep as-is | Benefits uncertain and change risky | Confirmed defect exists |
 
 ## Method
+For library-dependent cleanup or upgrades, apply **SKILL.md R0a** first: verify the version/revision selected by the actual build and consult its documentation. Do not replace working code solely to resemble newer API examples. For an authorized update, compare current/target documentation and migration notes, separate it from unrelated cleanup, and verify toolchain, API/ABI and consumer compatibility.
+
 Create characterization tests, mark invariants, compute API/ABI impact, apply one reversible change, run targeted gates, review independently, repeat. Compare complexity and risk before/after rather than refactor-by-instinct. If no compelling improvement, **do not refactor**.

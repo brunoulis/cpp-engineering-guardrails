@@ -38,13 +38,15 @@ Combine a mode with a profile, e.g. *"audit with the `native-ui` profile"*. Exam
 
 ## Install the skill
 
+See [INSTALL.md](INSTALL.md) for agent-specific paths, portable folder/skills CLI installation, language-scoped activation, updates and verification. Installing the instructions is separate from building the optional C++ tools.
+
 Keep the **whole folder** and place it in the skills directory your agent reads:
 
 | Agent | Project scope | User scope |
 |---|---|---|
 | Claude Code | `<project>/.claude/skills/cpp-engineering-guardrails/` | `~/.claude/skills/cpp-engineering-guardrails/` |
-| Codex | `<project>/.agents/skills/cpp-engineering-guardrails/` | — |
-| Hermes Agent | — | `~/.hermes/skills/cpp-engineering-guardrails/` (or a configured skills dir) |
+| Codex | `<project>/.agents/skills/cpp-engineering-guardrails/` | `~/.agents/skills/cpp-engineering-guardrails/` |
+| Hermes Agent | `<project>/.hermes/skills/cpp-engineering-guardrails/` | `~/.hermes/skills/cpp-engineering-guardrails/` (or a configured skills dir) |
 
 For teams, keep one versioned copy and symlink it where the agent supports symlinks. The modes and references work as plain instructions even if the CLI is never built.
 

@@ -31,6 +31,8 @@ Los binarios aparecen en `build/tools/cpp-rails/` (en generadores multi-config, 
 
 ## Instalar la skill en los agentes
 
+Consulta [INSTALL.md](INSTALL.md) para elegir agente y ámbito, instalar por carpeta o mediante skills CLI, comprobar el descubrimiento y actualizar o retirar solo esta skill. Instalar sus instrucciones no requiere compilar el CLI; esa preparación es opcional y separada.
+
 Conserva **toda la carpeta** y sitúala en el directorio de skills compatible con tu versión:
 
 - Codex: `PROYECTO/.agents/skills/cpp-engineering-guardrails/`
