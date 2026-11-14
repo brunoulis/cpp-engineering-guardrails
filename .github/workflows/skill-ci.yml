@@ -33,6 +33,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ilammy/msvc-dev-cmd@v1
-      - run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64
-      - run: cmake --build build --config Release --parallel 2
-      - run: ctest --test-dir build -C Release --output-on-failure
+        with:
+          arch: x64
+      # Use the initialized MSVC toolchain without requiring a specific VS IDE.
+      - run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=cl
+      - run: cmake --build build --parallel 2
+      - run: ctest --test-dir build --output-on-failure
