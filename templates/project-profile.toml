@@ -1,0 +1,35 @@
+# Project policy template; user/agent-readable contract.
+# IMPORTANT: cpp-rails never auto-loads this file from the target repository.
+# Pass --profile-file manually *only after reviewing its content*.
+# A project may use a different build system; this file cannot create a missing CMake build.
+
+[project]
+name = "replace-with-project-name"
+cpp_standard = "c++20"
+build_system = "CMake"
+platforms = ["Linux", "Windows"]
+public_abi = false
+
+[gates]
+require_build = true
+require_tests = true
+require_lint = false
+require_asan_ubsan = false
+require_tsan = false
+require_abi = false
+require_benchmark = false
+
+[review]
+block_heuristic_p2 = false
+require_independent_review = true
+
+[performance]
+min_samples_per_variant = 5
+max_median_regression_percent = 5.0
+
+# Optional human/agent context (not automatically enforced by cpp-rails):
+[contracts]
+ownership = "Describe who owns resource handles, buffers and tasks"
+error_semantics = "Describe error codes or exception guarantees"
+compatibility = "Describe consumers and supported compiler matrix"
+critical_paths = ["src/hot_path.cpp"]

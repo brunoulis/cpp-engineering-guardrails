@@ -1,0 +1,16 @@
+[profile]
+name = "engine"
+description = "Simulation, telemetry, native rendering, deterministic/replay-sensitive C++ engine"
+[gates]
+require_build = true
+require_tests = true
+require_lint = false
+require_asan_ubsan = false
+require_tsan = false
+require_abi = false
+require_benchmark = false # enable with explicit --results when performance is touched/claimed
+[review]
+block_heuristic_p2 = false
+require_independent_review = true
+[context]
+inspect = ["determinism", "hot-path allocation", "replay", "numeric stability", "SIMD equivalence", "shutdown"]

@@ -1,0 +1,18 @@
+[profile]
+name = "general"
+description = "C++ general-purpose applications and services"
+
+[gates]
+require_build = true
+require_tests = true
+require_lint = false
+require_asan_ubsan = false
+require_tsan = false
+require_abi = false
+require_benchmark = false
+
+[review]
+block_new_p0 = true
+block_new_p1 = true
+block_heuristic_p2 = false
+require_independent_review = true

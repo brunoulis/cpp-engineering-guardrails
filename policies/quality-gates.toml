@@ -1,0 +1,25 @@
+# Required gates are selected adaptively by changed code area.
+[defaults]
+minimum = ["build", "targeted-tests", "diff-review"]
+never_report_missing_as_passed = true
+preserve_tests = true
+
+[ownership]
+trigger = ["lifetime", "allocator", "raw pointer ownership", "view/span", "FFI buffer"]
+additional = ["asan-ubsan", "boundary-tests"]
+
+[concurrency]
+trigger = ["thread", "atomic", "shared state", "callbacks", "cancellation"]
+additional = ["tsan-separate-build", "shutdown-stress-tests"]
+
+[templates]
+trigger = ["concept", "requires", "generic algorithm", "public templates"]
+additional = ["real-instances-positive-negative", "supported-compiler-matrix"]
+
+[abi]
+trigger = ["exported symbol", "public header", "shared library", "C ABI"]
+additional = ["ABI-snapshot", "consumer-tests", "supported-platform-matrix"]
+
+[performance]
+trigger = ["speedup claim", "hot path", "allocation optimization", "SIMD"]
+additional = ["representative-baseline", "repeat-measurement", "release-build", "noise-check"]

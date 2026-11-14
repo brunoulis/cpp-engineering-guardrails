@@ -1,0 +1,15 @@
+# Native C++ build and temporary reports
+build/
+cmake-build-*/
+.cpp-rails/
+*.o
+*.obj
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+*.pdb
+*.gcda
+*.gcno
+*.zip

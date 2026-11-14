@@ -1,0 +1,38 @@
+name: cpp-engineering-guardrails native C++ validation
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  gcc-clang:
+    strategy:
+      fail-fast: false
+      matrix:
+        cxx: [g++, clang++]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure C++17 toolchain and C++20 fixture tests
+        env:
+          CXX: ${{ matrix.cxx }}
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+      - name: Build native CLI and fixtures
+        run: cmake --build build --parallel 2
+      - name: Run CTest (includes negative compiler fixture)
+        run: ctest --test-dir build --output-on-failure
+  macos-clang:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - run: cmake --build build --parallel 2
+      - run: ctest --test-dir build --output-on-failure
+  windows-msvc:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ilammy/msvc-dev-cmd@v1
+      - run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+      - run: cmake --build build --config Release --parallel 2
+      - run: ctest --test-dir build -C Release --output-on-failure

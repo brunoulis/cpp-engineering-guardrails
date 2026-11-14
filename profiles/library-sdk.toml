@@ -1,0 +1,23 @@
+[profile]
+name = "library-sdk"
+description = "Versioned public C++ library with source/API/ABI consumers"
+
+[gates]
+require_build = true
+require_tests = true
+require_lint = false
+require_asan_ubsan = false
+require_tsan = false
+require_abi = true
+require_benchmark = false
+
+[review]
+block_new_p0 = true
+block_new_p1 = true
+block_heuristic_p2 = false
+require_independent_review = true
+
+[compatibility]
+require_public_header_review = true
+require_symbol_review = true
+require_downstream_consumer_builds = true

@@ -1,0 +1,19 @@
+[profile]
+name = "native-ui"
+description = "Qt/ImGui/native event-loop software with state and resource lifecycle concerns"
+[gates]
+require_build = true
+require_tests = true
+require_lint = false
+require_asan_ubsan = false
+require_tsan = false
+require_abi = false
+require_benchmark = false
+[review]
+block_heuristic_p2 = false
+require_independent_review = true
+[context]
+inspect = ["event-loop affinity", "stale callbacks", "resource disposal", "keyboard/focus", "text scaling", "accessibility", "responsive targets"]
+reference = "references/native-ui-event-loop.md"
+# The CLI enables CPP-UI-* lexical rules for `--profile native-ui` and downgrades
+# parent-owned `new T(..., this|parent)` to P3. [context] keys guide the agent only.

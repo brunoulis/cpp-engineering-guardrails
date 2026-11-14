@@ -1,0 +1,11 @@
+# Example suppression policy. NOT active until reviewer approves.
+# For engine use: copy to <project>/.cpp-rails/exceptions.toml,
+# fill in a real finding id, path, owner, reason and expiry. All five required.
+# Expired or incomplete entries are rejected by the CLI. P0/P1 findings are not suppressed.
+
+# [[exception]]
+# id = "CPP-RAW-ALLOC-0123456789abcdef"
+# path = "src/legacy/example.cpp"
+# owner = "responsible-team"
+# reason = "Legacy ABI contract documented in ADR-0042; migration planned"
+# expires = "2027-03-31"

@@ -1,0 +1,27 @@
+[profile]
+name = "low-latency"
+description = "Telemetry, interop and high-rate processing with tail-latency budgets"
+
+[gates]
+require_build = true
+require_tests = true
+require_lint = false
+require_asan_ubsan = false
+require_tsan = false
+require_abi = false
+require_benchmark = true
+
+[review]
+block_new_p0 = true
+block_new_p1 = true
+block_heuristic_p2 = false
+require_independent_review = true
+
+[performance]
+require_baseline = true
+min_samples_per_variant = 5
+max_median_regression_percent = 5.0
+# Compare p95/p99 only with *per-operation* samples, not aggregates of aggregates.
+track_p99 = true
+track_allocations = true
+track_ffi_handoffs = true

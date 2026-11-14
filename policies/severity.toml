@@ -1,0 +1,24 @@
+# Human/agent policy; heuristics never automatically prove P0/P1.
+[severity.P0]
+name = "critical"
+gate = "block"
+requires = "reproducer or confirmed evidence"
+examples = ["confirmed UAF", "confirmed double free", "confirmed exploitable data race"]
+
+[severity.P1]
+name = "high"
+gate = "block"
+requires = "confirmed contract/regression/ABI break"
+examples = ["failing regression test", "unapproved public ABI break", "missing mandatory verification gate"]
+
+[severity.P2]
+name = "medium"
+gate = "review"
+requires = "likelihood and impact documented"
+examples = ["raw allocation ownership ambiguity", "possible dangling view", "unjustified complexity"]
+
+[severity.P3]
+name = "low"
+gate = "inform"
+requires = "actionable low-impact benefit"
+examples = ["minor style drift", "noncritical naming issue"]

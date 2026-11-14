@@ -1,0 +1,16 @@
+[profile]
+name = "prototype"
+description = "Fast experiments with explicitly tracked engineering debt, not production release certification"
+[gates]
+require_build = true
+require_tests = false # explicit debt, not pretend tests were run
+require_lint = false
+require_asan_ubsan = false
+require_tsan = false
+require_abi = false
+require_benchmark = false
+[review]
+block_heuristic_p2 = false
+require_independent_review = false
+[context]
+inspect = ["feature intent", "minimum useful complexity", "cleanup trigger", "production-readiness risks"]

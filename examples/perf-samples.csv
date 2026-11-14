@@ -1,0 +1,11 @@
+benchmark,variant,run_ns
+read_telemetry,baseline,100
+read_telemetry,baseline,101
+read_telemetry,baseline,98
+read_telemetry,baseline,99
+read_telemetry,baseline,102
+read_telemetry,candidate,94
+read_telemetry,candidate,95
+read_telemetry,candidate,96
+read_telemetry,candidate,93
+read_telemetry,candidate,95
