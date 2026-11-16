@@ -73,6 +73,30 @@ std::string_view good_alias_static() { static std::string text; return text; }
         return finding.rule == "SEM-DANGLING-VIEW" && finding.evidence.find("bad_alias") != std::string::npos;
     }) == 1, "canonical return type must recognize libc++ conversion aliases");
     require(alias_conversion.findings.size() == 1, "borrowed/static alias conversions must stay negative");
+    // Apple Clang can retain standard typedef spellings without a desugared
+    // template type. Keep that AST representation covered on every host.
+    put(source, R"cpp(
+namespace std {
+struct string_view { const char* pointer; };
+struct string {
+    using __self_view = string_view;
+    char bytes[1]{};
+    operator __self_view() const { return {bytes}; }
+};
+}
+struct string_like { operator std::string_view() const { return {"safe"}; } };
+#define RETURN_SHORTNAME(value) return value
+std::string_view bad_shortname() { std::string text; RETURN_SHORTNAME(text); }
+std::string_view good_shortname_parameter(const std::string& text) { return text; }
+std::string_view good_shortname_static() { static std::string text; return text; }
+std::string_view good_shortname_wrapper() { string_like text; return text; }
+)cpp");
+    Report standard_spelling;
+    analyze_semantic(options, temp.path, {source}, standard_spelling);
+    require(passed(standard_spelling), "standard typedef spelling AST must be covered");
+    require(standard_spelling.findings.size() == 1 && standard_spelling.findings.front().rule == "SEM-DANGLING-VIEW" &&
+            standard_spelling.findings.front().evidence.find("bad_shortname") != std::string::npos,
+            "standard string/string_view spellings must retain lifetime evidence without matching user wrappers");
     const std::string source_text = R"cpp(
 #include <string>
 #include <string_view>

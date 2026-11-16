@@ -54,6 +54,14 @@ cannot prove safety. The `semantic` gate describes successful AST coverage;
 the `safety` gate describes execution of the selected bounded contracts, with
 findings reported separately. Neither gate is a universal safety certificate.
 
+Standard string owners and views accept both canonical template types and the
+exact standard aliases (`std::string`, `std::string_view` and their character
+variants). Apple Clang may preserve these aliases without `desugaredQualType`.
+String-to-view conversions are identified by their standard owner/result types,
+independently of the conversion operator's displayed typedef spelling. Custom
+wrappers remain opaque. Host-independent AST protocol fixtures cover both forms;
+the real standard-library assertions remain identical across the CI matrix.
+
 ## Evidence sections
 
 `semantic-coverage` reports selected/analyzed translation units, retained AST

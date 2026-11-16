@@ -386,8 +386,8 @@ bool std_type(const std::string& value, const std::string& name) {
         if (!stripped) break;
     }
     const auto opening = outer.find('<');
-    if (opening == std::string_view::npos) return false;
-    auto prefix = outer.substr(0, opening);
+    const auto spelling_end = opening == std::string_view::npos ? outer.find_first_of(" \t&*[") : opening;
+    auto prefix = outer.substr(0, spelling_end);
     if (!prefix.starts_with("std::")) return false;
     prefix.remove_prefix(5);
     // Recognize the standard libraries' reserved implementation namespaces,
@@ -395,6 +395,17 @@ bool std_type(const std::string& value, const std::string& name) {
     while (prefix.starts_with("__")) {
         auto next = prefix.find("::"); if (next == std::string_view::npos) break;
         prefix.remove_prefix(next + 2);
+    }
+    if (opening == std::string_view::npos) {
+        // Apple Clang may preserve these standard aliases in expression types
+        // without providing desugaredQualType. Match whole qualified names,
+        // retaining the same pointer/array exclusions as template spellings.
+        if (outer.find('*') != std::string_view::npos || outer.find('[') != std::string_view::npos) return false;
+        if (name == "basic_string")
+            return prefix == "string" || prefix == "wstring" || prefix == "u8string" || prefix == "u16string" || prefix == "u32string";
+        if (name == "basic_string_view")
+            return prefix == "string_view" || prefix == "wstring_view" || prefix == "u8string_view" || prefix == "u16string_view" || prefix == "u32string_view";
+        return false;
     }
     if (prefix != name) return false;
     unsigned depth = 0; std::size_t closing = std::string_view::npos;
@@ -412,6 +423,13 @@ bool owner_type(const std::string& value) {
     int depth = 0;
     for (char c : value) { if (c == '<') ++depth; else if (c == '>') --depth; else if (c == '[' && depth == 0) return true; }
     return false;
+}
+bool standard_string_view_conversion(const Json& node) {
+    if (kind(node) != "CXXMemberCallExpr" || !std_type(type(node), "basic_string_view")) return false;
+    const auto& call = node["inner"].array();
+    if (call.empty() || kind(call[0]) != "MemberExpr" || !call[0]["name"].text().starts_with("operator ")) return false;
+    const auto& base = call[0]["inner"].array();
+    return base.size() == 1 && std_type(type(base[0]), "basic_string");
 }
 const Json& location(const Json& node) {
     auto& loc = node.has("loc") ? node["loc"] : node["range"]["begin"];
@@ -480,7 +498,7 @@ struct Analysis {
         if (k == "CXXMemberCallExpr") {
             if (children.empty() || kind(children[0]) != "MemberExpr") return {};
             auto member = children[0]["name"].text();
-            if (member != "data" && member != "c_str" && member.find("operator basic_string_view") == std::string::npos) return {};
+            if (member != "data" && member != "c_str" && !standard_string_view_conversion(node)) return {};
             const auto& base = children[0]["inner"].array(); return base.size() == 1 ? borrowed_owner(base[0]) : std::string{};
         }
         if (k == "CXXConstructExpr" || k == "CXXTemporaryObjectExpr" || k == "CXXFunctionalCastExpr" || k == "ImplicitCastExpr" || k == "ExprWithCleanups" || k == "MaterializeTemporaryExpr" || k == "CXXBindTemporaryExpr" || k == "ParenExpr") {
@@ -527,7 +545,7 @@ struct Analysis {
         if (k == "CXXMemberCallExpr") {
             const auto& call = node["inner"].array();
             auto member = call.empty() ? std::string{} : call[0]["name"].text();
-            if (member != "data" && member != "c_str" && member.find("operator basic_string_view") == std::string::npos) { ++stats.unknown; views.clear(); }
+            if (member != "data" && member != "c_str" && !standard_string_view_conversion(node)) { ++stats.unknown; views.clear(); }
         }
         for (const auto& child : node["inner"].array()) visit_body(child);
     }
@@ -604,7 +622,7 @@ struct Analysis {
                 const auto& base = children.empty() ? Json{}.array() : children[0]["inner"].array();
                 auto owner = base.size() == 1 ? reference(base[0]) : std::string{};
                 if (member == "clear" && owners.contains(owner) && !base.empty() && std_type(type(base[0]), "vector")) { invalidated.insert(owner); ++stats.invalidations; }
-                else if (member != "data" && member != "c_str" && member.find("operator basic_string_view") == std::string::npos) { views.clear(); invalidated.clear(); }
+                else if (member != "data" && member != "c_str" && !standard_string_view_conversion(node)) { views.clear(); invalidated.clear(); }
             }
             if (k == "CXXOperatorCallExpr") {
                 auto name = children.empty() ? std::string{} : children[0]["inner"].array().empty() ? std::string{} : children[0]["inner"].array()[0]["referencedDecl"]["name"].text();
