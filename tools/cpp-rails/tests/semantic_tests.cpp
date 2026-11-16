@@ -7,6 +7,10 @@
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
+#ifdef _WIN32
+#define NOMINMAX
+#include <windows.h>
+#endif
 
 using namespace cpprails;
 namespace {
@@ -27,7 +31,19 @@ bool passed(const Report& report) {
 }
 struct Temp {
     fs::path path = fs::temp_directory_path() / ("cpprails-semantic-test-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
-    Temp() { fs::create_directories(path / "source space"); }
+    Temp() {
+        fs::create_directories(path / "source space");
+#ifdef _WIN32
+        // Hosted Windows TEMP can use an 8.3 alias. Exercise that root identity
+        // locally as well, while retaining physical fragment-relative paths.
+        const auto needed = GetShortPathNameW(path.c_str(), nullptr, 0);
+        if (needed) {
+            std::wstring short_path(needed, L'\0');
+            const auto written = GetShortPathNameW(path.c_str(), short_path.data(), needed);
+            if (written && written < needed) { short_path.resize(written); path = short_path; }
+        }
+#endif
+    }
     ~Temp() { std::error_code error; fs::remove_all(path, error); }
 };
 }
@@ -59,6 +75,8 @@ int main(int argc, char** argv) try {
     Report included;
     analyze_semantic(options, temp.path, {source, fragment}, included);
     require(passed(included), "included selected fragment must have real TU coverage");
+    if (included.findings.size() != 1 || included.findings[0].path != "source space/body.inc" || included.findings[0].line != 3)
+        std::cerr << "Fragment root: " << utf8_bytes(temp.path.u8string()) << '\n' << json(included);
     require(included.findings.size() == 1 && included.findings[0].rule == "SEM-DELETE-MISMATCH" &&
             included.findings[0].path == "source space/body.inc" && included.findings[0].line == 3,
             "AST fragment finding must retain physical path and line; unrequested fragments are projected out");

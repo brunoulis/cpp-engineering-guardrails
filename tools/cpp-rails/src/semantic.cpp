@@ -1008,7 +1008,7 @@ void sections(const Options& options, const Stats& stats, Report& report) {
 }
 } // namespace
 
-void analyze_semantic(const Options& options, const fs::path& root, const std::vector<fs::path>& files, Report& report) {
+void analyze_semantic(const Options& options, const fs::path& requested_root, const std::vector<fs::path>& files, Report& report) {
     if (!options.semantic && !options.safety) return;
     Stats stats;
     auto unavailable = [&](const std::string& details) {
@@ -1017,6 +1017,9 @@ void analyze_semantic(const Options& options, const fs::path& root, const std::v
         sections(options, stats, report);
     };
     try {
+        // Source paths are canonicalized below. Match the reporting root to
+        // that identity too (Windows TEMP can contain an 8.3 directory alias).
+        const auto root = fs::weakly_canonical(requested_root);
         fs::path database;
         if (options.compilation_database) database = absolute(*options.compilation_database, root);
         else if (fs::is_regular_file(root / "compile_commands.json")) database = root / "compile_commands.json";
