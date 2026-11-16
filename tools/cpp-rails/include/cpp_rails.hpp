@@ -39,9 +39,20 @@ struct BaselineDelta {
     std::vector<Finding> resolved;
     std::vector<Finding> unobserved_entries;
 };
+struct ScanPolicy {
+    bool include_generated = false;
+    std::vector<std::string> excludes;
+};
+struct SourceExclusion {
+    std::string path, reason;
+    std::string kind = "file"; // directory entries represent pruned trees, not counted files
+};
 struct Report {
+    ScanPolicy scan_policy;
     std::string action, root, profile;
     std::size_t files_scanned = 0, files_skipped = 0, findings_capped = 0;
+    std::size_t files_excluded = 0, directories_excluded = 0, fragments_scanned = 0;
+    std::vector<SourceExclusion> exclusions;
     std::vector<Finding> findings;
     std::vector<Gate> gates;
     std::vector<std::string> notes;
@@ -66,6 +77,9 @@ struct Profile {
     double max_regression_pct = 5.0;
 };
 struct Options {
+    ScanPolicy scan_policy;
+    std::optional<fs::path> msvc_project;
+    std::string platform = "x64";
     bool check_program = false, changed = false, strict = false, lint = false;
     bool no_build = false, no_tests = false, lifetime = false, configure = false;
     bool help = false, compile_checks = false, exclude_tests = false;
@@ -97,6 +111,8 @@ struct Scan {
     std::vector<std::string> notes;
     std::size_t skipped = 0;
     std::size_t tests_excluded = 0;
+    std::size_t files_excluded = 0, directories_excluded = 0, fragments_scanned = 0;
+    std::vector<SourceExclusion> exclusions;
     std::size_t capped = 0, capped_files = 0;  // hints dropped by the per-file/per-rule limit
     std::size_t code_lines = 0, production_lines = 0, test_lines = 0;
     std::set<std::string> observed_paths;
@@ -108,8 +124,11 @@ std::string markdown(const Report& report);
 std::string json(const Report& report);
 Process exec(const std::vector<std::string>& args, const fs::path& cwd, bool separate_error = false);
 Scan scan(const fs::path& root, const std::optional<std::set<std::string>>& changed = {},
-          const std::string& profile = "general", bool exclude_tests = false);
+          const std::string& profile = "general", bool exclude_tests = false,
+          const ScanPolicy& policy = {});
 bool is_test_path(const std::string& relative_path);
+// Path-only policy evidence, also applicable to missing baseline paths.
+std::string scan_path_exclusion(const std::string& relative_path, const ScanPolicy& policy = {});
 std::string sarif(const Report& report);
 // Include topology over `files`; include_dirs are extra search roots (e.g. from -I flags).
 void report_topology(const fs::path& root, const std::vector<fs::path>& files,

@@ -10,13 +10,13 @@ description: >-
 license: MIT
 compatibility: A compiler supporting the tools in C++23 mode and CMake 3.20+ to build the optional CLI; target-project standards and external tools are discovered, never assumed.
 metadata:
-  version: "1.4.0"
+  version: "1.5.0"
   family: "engineering-guardrails"
   hermes:
     tags: [cpp, guardrails, audit, refactoring, performance, memory-safety]
 ---
 
-# C++ Engineering Guardrails · v1.4.0
+# C++ Engineering Guardrails · v1.5.0
 
 **Mission:** Produce correct, understandable, maintainable and demonstrably efficient C++ code while respecting each project's requirements. This skill is not a style-enforcement bot, a promise of UB-free C++, or an excuse to rewrite working code.
 
@@ -46,6 +46,25 @@ Consult official documentation for that version **before changing library-depend
 For an update, establish **current and intended target versions**, consult both sets of documentation and intervening release/migration notes, and assess transitive dependencies, compiler/standard requirements, configuration macros, ABI/CRT compatibility and downstream consumers as applicable. Update only when requested or justified within the authorized task. Cleanup does not authorize an upgrade; a newer release alone is not a reason to change dependencies, compiler or C++ standard.
 
 Inspect dependency/build configuration changes and verify the affected builds, tests and consumer/link/ABI checks on the relevant configuration matrix. Preserve contracts or explicitly identify intentional migration changes and rollback. Report versions/revisions, documentation URLs or local paths, update rationale and actual checks. Reuse verified evidence while the resolved build and task assumptions remain unchanged.
+
+### R0b — Compiler context and source scope
+
+Record the selected configuration/platform, compiler toolset, SDK, language standard,
+CRT, defines and include paths. A successful build of the auditor does not verify
+the analyzed project's compiler context. MSVC commands require Clang's CL driver;
+Visual Studio generators do not emit a compilation database merely because
+`CMAKE_EXPORT_COMPILE_COMMANDS` is enabled. For a trusted existing `.vcxproj`, use
+the explicit evaluated-context workflow in [MSVC.md](tools/cpp-rails/MSVC.md).
+Unsupported flags, missing context and partial AST coverage remain UNVERIFIED.
+
+Inventory authored sources, tests, generated files and included fragments. Report
+intentional exclusions separately from unreadable/skipped files and identify the
+selected denominator before comparing quality rates. The auditor excludes recognized
+generated code by default; use `--include-generated` to inspect the generator output
+or repeatable `--exclude GLOB` for explicit scope. Include `.inc` and `.inl` in lexical
+and include-topology review. Analyze their semantic bodies through the real including
+translation units, with fragment locations and uncovered fragments reported. They
+are not standalone compile targets. An excluded or unobserved finding is not fixed.
 
 ## Select operating mode
 

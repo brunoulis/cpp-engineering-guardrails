@@ -13,5 +13,10 @@ int main(int argc,char** argv){try{
     }
     if(sarif(Report{}).find("\"version\":\""+version+"\"")==std::string::npos)throw std::runtime_error("SARIF tool version drift");
     for(auto name:{"CMakeLists.txt","tools/cpp-rails/CMakeLists.txt"})if(read(root/name).find("version.cmake")==std::string::npos)throw std::runtime_error("CMake version source drift");
+    const auto skill=read(root/"SKILL.md"), guide=read(root/"tools/cpp-rails/README.md");
+    for(const auto* token:{"MSVC.md","--include-generated",".inc", ".inl"})
+        if(skill.find(token)==std::string::npos)throw std::runtime_error(std::string("skill missing analysis scope workflow: ")+token);
+    for(const auto* token:{"compdb", "--msvc-project", "--platform", "--include-generated", "--exclude"})
+        if(guide.find(token)==std::string::npos)throw std::runtime_error(std::string("CLI guide missing public workflow: ")+token);
     std::cout<<"version, C++23 and generated CLI metadata agree: "<<version<<'\n';return 0;
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}

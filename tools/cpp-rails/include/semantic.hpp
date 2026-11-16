@@ -5,10 +5,13 @@
 namespace cpprails {
 // Opt-in compiler-backed analysis. Missing compilation context never counts as PASS.
 // analysis_budget counts visited AST nodes; zero means unlimited visits.
+// Requested implementation fragments require an observed AST location in an
+// included real translation unit; they are never compiled as standalone inputs.
 void analyze_semantic(const Options& options, const fs::path& root,
                       const std::vector<fs::path>& files, Report& report);
 // Compiler-produced complete dependency closure for conservative result caches.
 // Returns false for missing compile context, unsupported argv, or unreadable deps.
+// cl/clang-cl entries use the same verified CL replay context as AST analysis.
 bool semantic_dependencies(const Options& options, const fs::path& root,
                            const fs::path& unit, std::vector<fs::path>& dependencies,
                            std::string& diagnostics);

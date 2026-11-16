@@ -1,6 +1,12 @@
-# C++ Engineering Guardrails v1.4.0
+# C++ Engineering Guardrails v1.5.0
 
 > English: [README.md](README.md)
+
+La v1.5 incorpora [contexto real de MSVC](tools/cpp-rails/MSVC.md), exportación
+explícita mediante MSBuild para proyectos Visual Studio, exclusión de código
+generado con recuento de cobertura y análisis de `.inc`/`.inl` a través de las
+unidades que los incluyen. `--include-generated` permite revisar esos archivos y
+`--exclude` acota el ámbito. La cobertura incompleta sigue siendo UNVERIFIED.
 
 ## Safety Intelligence (skill v1.4.0)
 

@@ -45,6 +45,40 @@ The `--source` template check is a **standalone compiler invocation**, without t
 
 ## Implemented capabilities and limits
 
+### MSVC and source scope (v1.5)
+
+Use an MSVC developer environment matching the selected architecture/toolset.
+The semantic backend detects `cl.exe`/`clang-cl` commands and uses Clang's CL
+driver while retaining supported preprocessing, language and ABI options.
+Unsupported compiler context remains UNVERIFIED. This is compiler-backed analysis
+using Clang, not a claim that MSVC itself provides Clang's JSON AST.
+
+For existing Visual Studio projects, explicitly export evaluated configuration:
+
+```powershell
+cpp-rails-audit compdb --root C:/project --msvc-project build/pf_capture.vcxproj --config Release --platform x64 --output C:/audit/compile_commands.json
+cpp-rails-audit audit --root C:/project/src --semantic --clang clang++ --compilation-database C:/audit/compile_commands.json --format json --output C:/audit/report.json
+```
+
+`compdb` evaluates a trusted project with MSBuild; it does not build it. Exported
+commands reconstruct supported per-file settings for Clang analysis, and the report
+records the selected toolset/SDK/configuration. See [MSVC.md](MSVC.md) for requirements
+and limits. CMake's Visual Studio generator does not implement compilation-database
+export; use the evaluated workflow or an existing genuine Make/Ninja database.
+
+Recognized generated sources are excluded by default. `--include-generated`
+includes them for generator/output review; repeatable `--exclude GLOB` applies
+explicit path exclusions. Reports list reasons and scope counts separately from
+read failures. Quality rates use selected files only, so compare scope before
+interpreting changes. Ordinary authored files mentioning generated code stay in
+scope. `.inc`/`.inl` participate in lexical, quality and include-topology analysis;
+semantic analysis uses their including translation units and reports uncovered
+fragments. Lint does not invoke fragments as standalone translation units.
+Excluded/unobserved baseline entries are not marked resolved.
+New baselines record the generated/exclusion policy. Deleted files resolve only
+when that policy matches; legacy baselines without scope provenance keep deleted
+entries unobserved, since their former generated banners cannot be inspected.
+
 | Capability | Implementation status |
 |---|---|
 | Read-only lexical heuristic scanner with comment/string masking | Implemented, P2/P3 **suspicions only** |

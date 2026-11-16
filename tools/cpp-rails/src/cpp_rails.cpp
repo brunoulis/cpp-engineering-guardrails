@@ -4,6 +4,7 @@
 #include "semantic.hpp"
 #include "architecture.hpp"
 #include "lint.hpp"
+#include "msvc.hpp"
 
 #include <algorithm>
 #include <array>
@@ -138,12 +139,16 @@ std::string usage(bool check_program) {
     std::ostringstream o;
     o << (check_program ? "cpp-rails-check" : "cpp-rails-audit") << " — C++23 native engineering guardrails\n";
     o << (check_program ? "Usage: cpp-rails-check [options]\n" :
-          "Usage: cpp-rails-audit [audit|triage|plan|topology|baseline|safety map|safety contracts|safety boundaries|safety regressions|templates|perf compare|perf analyze] [options]\n");
+          "Usage: cpp-rails-audit [audit|triage|plan|topology|baseline|compdb|safety map|safety contracts|safety boundaries|safety regressions|templates|perf compare|perf analyze] [options]\n");
     o << "  --root PATH           C++ project root (default '.')\n"
       << "  --profile NAME        general|low-latency|library-sdk|legacy-code|engine|service|native-ui|ffi|prototype\n"
       << "  --profile-file PATH   Explicit, reviewed TOML profile (never auto-load from target)\n"
       << "  --format FORMAT       markdown|json|sarif (SARIF 2.1.0 for code-scanning UIs)\n"
       << "  --exclude-tests       Skip test/fixture/mock sources (otherwise reported as scope=test, one level lower)\n"
+      << "  --include-generated   Include recognized generated sources and generated directories\n"
+      << "  --exclude GLOB        Exclude root-relative path/directory glob (repeatable; * spans separators)\n"
+      << "  --msvc-project PATH   compdb: explicit MSBuild evaluated .vcxproj export (no build)\n"
+      << "  --platform NAME       MSBuild platform for compdb (default x64; use --config for configuration)\n"
       << "  --include-dir PATH    Extra include root for topology (repeatable; compile_commands.json -I flags are read too)\n"
       << "  --output PATH         Report file; baseline inventory for 'baseline'\n"
       << "  --changed             Scan Git diff versus HEAD + untracked files\n"
@@ -192,7 +197,7 @@ Options parse_options(bool check_program,const std::vector<std::string>& args) {
         opt.action=args[i++];
         if ((opt.action=="perf"||opt.action=="safety") && i<args.size() && !args[i].empty() && args[i][0]!='-') opt.subaction=args[i++];
     }
-    const std::set<std::string> actions={"audit","triage","plan","topology","baseline","templates","perf","safety"};
+    const std::set<std::string> actions={"audit","triage","plan","topology","baseline","compdb","templates","perf","safety"};
     if (!check_program && !actions.count(opt.action)) throw std::runtime_error("unsupported action: "+opt.action);
     if (opt.action=="perf" && opt.subaction!="compare" && opt.subaction!="analyze")
         throw std::runtime_error("perf requires 'compare' or 'analyze'");
@@ -258,6 +263,10 @@ Options parse_options(bool check_program,const std::vector<std::string>& args) {
         else if(a=="--abi-new") opt.abi_new=path_from_utf8(next(a));
         else if(a=="--lifetime") opt.lifetime=true;
         else if(a=="--exclude-tests") opt.exclude_tests=true;
+        else if(a=="--include-generated") opt.scan_policy.include_generated=true;
+        else if(a=="--exclude") opt.scan_policy.excludes.push_back(next(a));
+        else if(a=="--msvc-project") opt.msvc_project=path_from_utf8(next(a));
+        else if(a=="--platform") opt.platform=next(a);
         else if(a=="--include-dir") opt.include_dirs.push_back(path_from_utf8(next(a)));
         else throw std::runtime_error("unknown argument "+a);
     }
@@ -323,10 +332,58 @@ std::set<std::string> changed_paths(const fs::path& root,std::vector<std::string
 }
 namespace {
 const std::set<std::string> excluded={".git",".svn","target","build","_build",".cpp-rails","node_modules",
-    "vendor","third_party","external","_deps","generated",".cache","out","dist","CMakeFiles",".worktrees",".superpowers","cmake-build-debug","cmake-build-release"};
+    "vendor","third_party","external","_deps",".cache","out","dist","CMakeFiles",".worktrees",".superpowers","cmake-build-debug","cmake-build-release"};
 bool is_source(const fs::path& p) {
     const auto ext=lower(utf8_bytes(p.extension().u8string()));
-    return std::set<std::string>{".cpp",".cc",".cxx",".c",".h",".hpp",".hh",".hxx",".ipp",".tpp",".ixx"}.count(ext)!=0;
+    return std::set<std::string>{".cpp",".cc",".cxx",".c",".h",".hpp",".hh",".hxx",".ipp",".tpp",".ixx",".inc",".inl"}.count(ext)!=0;
+}
+bool is_fragment(const fs::path& p) {
+    const auto ext=lower(utf8_bytes(p.extension().u8string()));
+    return ext==".inc"||ext==".inl"||ext==".ipp"||ext==".tpp";
+}
+std::string excluded_by(const std::string& relative,const ScanPolicy& policy) {
+    for(auto pattern:policy.excludes) {
+        std::replace(pattern.begin(),pattern.end(),'\\','/');
+        while(pattern.starts_with("./"))pattern.erase(0,2);
+        while(!pattern.empty()&&pattern.back()=='/')pattern.pop_back();
+        if(pattern.empty())continue;
+        if(glob(pattern,relative))return "explicit --exclude "+pattern;
+        // A directory match applies to all descendants, including a literal directory argument.
+        for(auto slash=relative.find('/');slash!=std::string::npos;slash=relative.find('/',slash+1))
+            if(glob(pattern,relative.substr(0,slash)))return "explicit --exclude "+pattern;
+    }
+    return {};
+}
+std::string generated_path_reason(const fs::path& path,const fs::path& root) {
+    const auto relative=path.lexically_relative(root);
+    for(const auto& part:relative.parent_path())
+        if(lower(utf8_bytes(part.u8string()))=="generated")return "generated directory";
+    const auto name=lower(utf8_bytes(path.filename().u8string()));
+    const auto stem=lower(utf8_bytes(path.stem().u8string()));
+    if(stem.ends_with(".g")||stem.ends_with(".generated")||name.ends_with(".pb.h")||name.ends_with(".pb.cc"))
+        return "recognized generated filename";
+    return {};
+}
+bool generated_banner(const std::string& raw) {
+    std::size_t pos=raw.starts_with("\xef\xbb\xbf")?3:0;
+    static const std::regex marker(R"((^|\n)[ \t\r*]*(generated[ \t]+(code|file|by)\b|automatically[ \t]+generated\b|auto[ -]generated\b|autogenerated\b|<auto-generated\b))",std::regex::icase);
+    // Only leading comments are evidence; strings and comments after code are authored source.
+    while(pos<raw.size()) {
+        while(pos<raw.size()&&std::isspace(static_cast<unsigned char>(raw[pos])))++pos;
+        if(raw.compare(pos,2,"//")==0) {
+            const auto end=raw.find('\n',pos+2);
+            const auto comment=raw.substr(pos+2,end==std::string::npos?end:end-pos-2);
+            if(std::regex_search(comment,marker))return true;
+            if(end==std::string::npos)return false;
+            pos=end+1;
+        } else if(raw.compare(pos,2,"/*")==0) {
+            const auto end=raw.find("*/",pos+2);
+            if(end==std::string::npos)return false;
+            if(std::regex_search(raw.substr(pos+2,end-pos-2),marker))return true;
+            pos=end+2;
+        } else return false;
+    }
+    return false;
 }
 bool is_header(const fs::path& p) {
     const auto ext=lower(utf8_bytes(p.extension().u8string()));
@@ -499,8 +556,20 @@ std::vector<Pattern> rules(const std::string& line,const LineContext& ctx) {
 constexpr unsigned per_file_rule_cap=20;
 } // namespace
 bool is_test_path(const std::string& relative) {return path_is_test(relative);}
-Scan scan(const fs::path& root,const std::optional<std::set<std::string>>& changed,const std::string& profile,bool exclude_tests) {
+std::string scan_path_exclusion(const std::string& relative,const ScanPolicy& policy) {
+    if(auto reason=excluded_by(relative,policy);!reason.empty())return reason;
+    const auto path=path_from_utf8(relative);
+    for(const auto& part:path.parent_path()) {
+        const auto directory=utf8_bytes(part.u8string());
+        if(excluded.count(directory)||directory.starts_with("cmake-build-"))return "default dependency/build directory";
+    }
+    if(!policy.include_generated)return generated_path_reason(fs::path("scope")/path,fs::path("scope"));
+    return {};
+}
+Scan scan(const fs::path& root,const std::optional<std::set<std::string>>& changed,const std::string& profile,bool exclude_tests,const ScanPolicy& policy) {
     Scan scan_result;
+    std::vector<fs::path> candidates;
+    const auto exclude_file=[&](const std::string& path,const std::string& reason){++scan_result.files_excluded;scan_result.exclusions.push_back({path,reason,"file"});};
     const bool native_ui=profile=="native-ui";
     if (native_ui) scan_result.notes.push_back("native-ui rules enabled: connect without context, nested event loops, window user data, parent-owned allocation (P3)");
     std::error_code ec;
@@ -513,23 +582,33 @@ Scan scan(const fs::path& root,const std::optional<std::set<std::string>>& chang
         if(symlink) {++scan_result.skipped;it.disable_recursion_pending();it.increment(ec);continue;}
         if(it->is_directory(ec)) {
             const auto directory=utf8_bytes(path.filename().u8string());
-            if(excluded.count(directory)||directory.starts_with("cmake-build-")) it.disable_recursion_pending();
+            const auto rel=relative_path(path,root);
+            auto reason=excluded_by(rel,policy);
+            if(reason.empty()&&(excluded.count(directory)||directory.starts_with("cmake-build-")))reason="default dependency/build directory";
+            if(!reason.empty()) {
+                ++scan_result.directories_excluded;scan_result.exclusions.push_back({rel,reason,"directory"});it.disable_recursion_pending();
+            }
         } else if(it->is_regular_file(ec) && is_source(path)) {
             const auto rel=relative_path(path,root);
-            if (exclude_tests && path_is_test(rel)) ++scan_result.tests_excluded;
-            else if (!changed || changed->count(rel)) {
+            if (!changed || changed->count(rel)) {
+                auto reason=scan_path_exclusion(rel,policy);
+                if(reason.empty()&&exclude_tests&&path_is_test(rel)){++scan_result.tests_excluded;reason="test/fixture source (--exclude-tests)";}
+                if(!reason.empty()){exclude_file(rel,reason);ec.clear();it.increment(ec);continue;}
                 auto len=fs::file_size(path,ec);
-                if(!ec && len<=2*1024*1024) scan_result.files.push_back(path);
+                if(!ec && len<=2*1024*1024) candidates.push_back(path);
                 else ++scan_result.skipped;
             }
         }
         ec.clear();it.increment(ec);
         if(ec){scan_result.notes.push_back("scan incomplete at "+utf8_bytes(path.u8string())+": "+ec.message());ec.clear();}
     }
-    std::sort(scan_result.files.begin(),scan_result.files.end());
-    for(auto& p:scan_result.files) {
+    std::sort(candidates.begin(),candidates.end());
+    for(auto& p:candidates) {
         std::string raw;
         try {raw=read_file(p);}catch(const std::exception& e){++scan_result.skipped;scan_result.notes.push_back(e.what());continue;}
+        if(!policy.include_generated&&generated_banner(raw)){exclude_file(relative_path(p,root),"leading generated comment banner");continue;}
+        scan_result.files.push_back(p);
+        if(is_fragment(p))++scan_result.fragments_scanned;
         const auto masked=mask_code(raw);
         const auto filename=relative_path(p,root);
         scan_result.observed_paths.insert(filename);
@@ -1027,6 +1106,14 @@ int dispatch(const Options& opt,Report& report) {
     if(!fs::is_directory(root))throw std::runtime_error("root is not a directory");
     report.root=utf8_bytes(root.u8string());report.profile=opt.profile;
     report.action=opt.action+(opt.subaction.empty()?"":" "+opt.subaction);
+    if(opt.action=="compdb") {
+        if(!opt.msvc_project||!opt.config||!opt.output)
+            throw std::runtime_error("compdb requires --msvc-project, --config and --output");
+        export_msvc_compilation_database(resolve(root,*opt.msvc_project),*opt.config,opt.platform,
+                                         resolve(root,*opt.output),report);
+        return report.has_failure()?1:report.required_unverified()?2:0;
+    }
+    if(opt.msvc_project)throw std::runtime_error("--msvc-project requires the explicit compdb action");
     auto profile=load_profile(opt,root,report);
     if(opt.action=="perf") {
         if(opt.subaction=="compare") {
@@ -1036,17 +1123,20 @@ int dispatch(const Options& opt,Report& report) {
         } else compiler_remarks(opt,root,report);
     } else {
         auto changed=opt.changed?std::optional<std::set<std::string>>(changed_paths(root,&report.notes)):std::nullopt;
-        auto result=scan(root,changed,opt.profile,opt.exclude_tests);
+        auto result=scan(root,changed,opt.profile,opt.exclude_tests,opt.scan_policy);
         if(changed) {
             std::size_t missing=0;for(const auto& path:*changed)if(!fs::exists(root/path_from_utf8(path)))++missing;
             report.notes.push_back("Changed scope: "+std::to_string(changed->size())+" paths inside --root, "+std::to_string(missing)+
                 " deleted/missing (not scanned); repository paths outside --root are excluded. Renames include old and new paths; untracked files included.");
         }
         report.files_scanned=result.files.size();report.files_skipped=result.skipped;
+        report.scan_policy=opt.scan_policy;
+        report.files_excluded=result.files_excluded;report.directories_excluded=result.directories_excluded;
+        report.fragments_scanned=result.fragments_scanned;report.exclusions=result.exclusions;
         report.findings_capped=result.capped;
         report.code_lines=result.code_lines;report.production_lines=result.production_lines;report.test_lines=result.test_lines;
         report.scanned_paths=result.observed_paths;
-        report.scan_complete=!changed&&result.skipped==0&&result.capped==0&&result.notes.empty()&&!opt.exclude_tests;
+        report.scan_complete=!changed&&result.skipped==0&&result.capped==0&&result.notes.empty()&&!opt.exclude_tests&&result.files_excluded==0&&opt.scan_policy.excludes.empty();
         report.findings=std::move(result.findings);
         if(opt.score) {
             const auto quality=quality_score(root,result.files);
@@ -1062,7 +1152,8 @@ int dispatch(const Options& opt,Report& report) {
                 if(fs::is_directory(db))db/="compile_commands.json";
                 if(fs::is_regular_file(db)) {
                     report.completed_analyzers.insert("clang-ast");
-                    report.analyzer_contexts["clang-ast"]=make_id("semantic-context",opt.safety?"safety":"semantic",opt.clang_executable+read_file(db),0);
+                    if(!report.analyzer_contexts.contains("clang-ast"))
+                        report.analyzer_contexts["clang-ast"]=make_id("semantic-context",opt.safety?"safety":"semantic",opt.clang_executable+read_file(db),0);
                 }
             } else if(gate.name=="project rules"&&opt.project_rules) {
                 report.completed_analyzers.insert("project-rules");
@@ -1164,7 +1255,7 @@ int cli_entry(bool check_program,int argc,const char* const argv[]) {
         Report report;
         auto result=dispatch(opt,report);
         const auto formatted=opt.format=="json"?json(report):opt.format=="sarif"?sarif(report):markdown(report);
-        if(opt.output && opt.action!="baseline") {
+        if(opt.output && opt.action!="baseline" && opt.action!="compdb") {
             write_file(resolve(fs::canonical(opt.root.value_or(fs::path("."))),*opt.output),formatted);
             std::cout<<"Report written to "<<opt.output->string()<<'\n';
         } else std::cout<<formatted;

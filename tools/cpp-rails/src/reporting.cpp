@@ -67,7 +67,8 @@ std::string markdown(const Report& r) {
     const auto production=std::count_if(r.findings.begin(),r.findings.end(),[](auto& f){return f.scope!="test";});
     out << "# cpp-engineering-guardrails — " << r.action << "\n\n"
         << "- Root: `" << r.root << "`\n- Profile: `" << r.profile << "`\n"
-        << "- Files scanned: " << r.files_scanned << "; skipped: " << r.files_skipped << "\n"
+        << "- Files scanned: " << r.files_scanned << " (fragments: " << r.fragments_scanned << "); skipped (read/size/link failures): " << r.files_skipped << "\n"
+        << "- Intentionally excluded files: " << r.files_excluded << "; pruned directories: " << r.directories_excluded << " (contents not counted)\n"
         << "- Review findings: " << r.findings.size() << " (" << production << " production, "
         << (r.findings.size()-static_cast<std::size_t>(production)) << " test; "
         << r.new_unsuppressed_p2() << " new, unsuppressed P2)"
@@ -76,6 +77,11 @@ std::string markdown(const Report& r) {
     if(r.code_lines)out<<1000.0*static_cast<double>(r.findings.size())/static_cast<double>(r.code_lines);else out<<"UNMEASURED";
     out<<". Rate describes selected scope, not software quality.\n\n";
     if(r.delta.loaded)out<<"Baseline: "<<r.delta.added<<" new; "<<r.delta.known<<" known; "<<r.delta.resolved.size()<<" disappeared in observed scope; "<<r.delta.unobserved<<" unobserved.\n\n";
+    if(!r.exclusions.empty()) {
+        out<<"## Source exclusions\n\n| Path | Kind | Reason |\n|---|---|---|\n";
+        for(const auto& e:r.exclusions)out<<"| "<<table_safe(e.path)<<" | "<<e.kind<<" | "<<table_safe(e.reason)<<" |\n";
+        out<<"\nCounts and rates describe the selected source scope. Pruned directory contents are not inventoried.\n\n";
+    }
     for(const auto& section:r.sections)out<<section.markdown<<"\n\n";
     const auto tallies=tally_by_rule(r);
     if (!tallies.empty()) {
@@ -119,7 +125,10 @@ std::string json(const Report& r) {
     std::ostringstream out;
     out<<"{\"action\":"<<json_quote(r.action)<<",\"root\":"<<json_quote(r.root)
        <<",\"profile\":"<<json_quote(r.profile)<<",\"files_scanned\":"<<r.files_scanned
-       <<",\"files_skipped\":"<<r.files_skipped<<",\"findings_capped\":"<<r.findings_capped<<",\"summary\":{\"by_rule\":{";
+       <<",\"files_skipped\":"<<r.files_skipped<<",\"files_excluded\":"<<r.files_excluded
+       <<",\"directories_excluded\":"<<r.directories_excluded<<",\"fragments_scanned\":"<<r.fragments_scanned<<",\"exclusions\":[";
+    for(std::size_t i=0;i<r.exclusions.size();++i){if(i)out<<',';const auto& e=r.exclusions[i];out<<"{\"path\":"<<json_quote(e.path)<<",\"kind\":"<<json_quote(e.kind)<<",\"reason\":"<<json_quote(e.reason)<<'}';}
+    out<<"],\"findings_capped\":"<<r.findings_capped<<",\"summary\":{\"by_rule\":{";
     {
         bool first=true;
         for (auto& [rule,t]:tally_by_rule(r)) {
