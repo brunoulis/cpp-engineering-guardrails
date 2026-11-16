@@ -10,13 +10,13 @@ description: >-
 license: MIT
 compatibility: A compiler supporting the tools in C++23 mode and CMake 3.20+ to build the optional CLI; target-project standards and external tools are discovered, never assumed.
 metadata:
-  version: "1.3.0"
+  version: "1.4.0"
   family: "engineering-guardrails"
   hermes:
     tags: [cpp, guardrails, audit, refactoring, performance, memory-safety]
 ---
 
-# C++ Engineering Guardrails · v1.3.0
+# C++ Engineering Guardrails · v1.4.0
 
 **Mission:** Produce correct, understandable, maintainable and demonstrably efficient C++ code while respecting each project's requirements. This skill is not a style-enforcement bot, a promise of UB-free C++, or an excuse to rewrite working code.
 
@@ -92,8 +92,11 @@ to report lifetime, invalidation, initialization, bounds and thread safety with
 property-specific PASS/FAIL/UNVERIFIED/N/A, assumptions and uncovered scope.
 A passing tool run is evidence within its coverage, not a whole-component safety
 proof. Engineering profiles and CLI `--strict` do not implement WG21 Safety
-Profiles. The proposed `safety ...` commands and `--safety-profile` are not
-implemented. See `references/safety-adoption.md` for adoption and engine roadmap.
+Profiles. Optional `safety map|contracts|boundaries|regressions` use real Clang AST
+with the compilation database for bounded intraprocedural evidence. Unsupported
+effects remain unknown; these commands do not verify arbitrary contracts or
+whole-program safety. `--safety-profile` remains unimplemented. See
+`references/safety-adoption.md` and `tools/cpp-rails/SEMANTIC_BACKEND.md` for coverage.
 
 ## Protocol · DISCOVER → (RECALL) → ANALYZE → PLAN → IMPLEMENT → VERIFY → REVIEW → REPORT
 
@@ -137,6 +140,10 @@ ctest --test-dir build --output-on-failure
 # From a target C++ repository:
 SKILL=/path/to/cpp-engineering-guardrails
 "$SKILL/build/tools/cpp-rails/cpp-rails-audit" audit --root . --profile general
+"$SKILL/build/tools/cpp-rails/cpp-rails-audit" audit --root . --score
+"$SKILL/build/tools/cpp-rails/cpp-rails-audit" audit --root . --semantic --compilation-database build/compile_commands.json
+"$SKILL/build/tools/cpp-rails/cpp-rails-audit" safety contracts --root . --compilation-database build/compile_commands.json
+"$SKILL/build/tools/cpp-rails/cpp-rails-audit" plan --root . --format json --output refactor-review.json
 "$SKILL/build/tools/cpp-rails/cpp-rails-audit" triage --root . --format json --output review.json
 "$SKILL/build/tools/cpp-rails/cpp-rails-audit" audit --root . --exclude-tests --format sarif --output cpp-rails.sarif
 "$SKILL/build/tools/cpp-rails/cpp-rails-audit" topology --root . --include-dir include
@@ -146,6 +153,17 @@ SKILL=/path/to/cpp-engineering-guardrails
 ```
 
 `cpp-rails-check --configure` may configure a CMake project only on explicit request. Additional opt-in switches: `--config NAME` (multi-config generators), `--lint`, `--sanitizer asan-ubsan|tsan`, `--compiler-matrix`, `--abi-old/--abi-new`, `--lifetime`, `--results`. For non-CMake projects, use their existing build/test commands directly. See `tools/cpp-rails/README.md` for actual implementation and limitations; do not infer unimplemented AST/UB proofs.
+
+`--score` reports six independent lexical quality indicators with evidence, not
+a global quality grade. `--semantic` is explicit and requires Clang plus actual
+compile commands; unavailable or incomplete scope is UNVERIFIED. Every finding
+records its analyzer and evidence level. `topology --targets` reads existing
+CMake File API replies; fallback parsing is heuristic. `--rules PATH` explicitly
+loads reviewed project rules; it cannot suppress compiler-backed safety findings.
+Baseline differences distinguish new, known, disappeared in observed scope and
+unobserved entries; disappearance is not proof of a fix. Lint supports batches,
+budgets and opt-in dependency-validated caching. A generated `plan` gives review
+alternatives and required evidence; the CLI never edits target code.
 
 ## Mandatory handoff
 

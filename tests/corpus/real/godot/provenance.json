@@ -1,0 +1,13 @@
+{
+  "repository": "godotengine/godot",
+  "revision": "53166eb0eb0457457d0e41836ac99a2dc9e18996",
+  "source": "core/math/aabb.cpp",
+  "source_url": "https://raw.githubusercontent.com/godotengine/godot/53166eb0eb0457457d0e41836ac99a2dc9e18996/core/math/aabb.cpp",
+  "excerpt_lines": "1-182",
+  "excerpt_sha256": "63463C8447F7F2BDB097474B14902A339C47121E2F5A7F948E2E715991269845",
+  "license_path": "LICENSE.txt",
+  "license_present": true,
+  "license_error": null,
+  "source_sha256": "0EEB67E2D5B79027B818808734EB8353983AC322B3B9B09BFCA0778632F6431A",
+  "license_sha256": "B0435E3B3E4E55238F05F4B306F30524A1B2E20147810D436EAA554FA6855C80"
+}

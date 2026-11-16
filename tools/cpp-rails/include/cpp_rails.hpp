@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <filesystem>
+#include <map>
 #include <optional>
 #include <set>
 #include <string>
@@ -28,6 +29,15 @@ struct Finding {
     bool existing = false;
     bool suppressed = false;
     std::string scope = "production";  // "production" or "test" (tests are reported one level lower)
+    std::string analyzer = "lexical";
+    std::string evidence_level = "heuristic";
+};
+struct AnalysisSection { std::string name, json, markdown; };
+struct BaselineDelta {
+    bool loaded = false;
+    std::size_t added = 0, known = 0, unobserved = 0;
+    std::vector<Finding> resolved;
+    std::vector<Finding> unobserved_entries;
 };
 struct Report {
     std::string action, root, profile;
@@ -35,6 +45,13 @@ struct Report {
     std::vector<Finding> findings;
     std::vector<Gate> gates;
     std::vector<std::string> notes;
+    std::vector<AnalysisSection> sections;
+    std::size_t code_lines = 0, production_lines = 0, test_lines = 0;
+    std::set<std::string> scanned_paths;
+    bool scan_complete = false;
+    BaselineDelta delta;
+    std::map<std::string,std::string> analyzer_contexts;
+    std::set<std::string> completed_analyzers;
     void gate(std::string name, Status status, std::string details, bool required = true);
     bool has_failure() const;
     bool required_unverified() const;
@@ -52,6 +69,12 @@ struct Options {
     bool check_program = false, changed = false, strict = false, lint = false;
     bool no_build = false, no_tests = false, lifetime = false, configure = false;
     bool help = false, compile_checks = false, exclude_tests = false;
+    bool score = false, semantic = false, safety = false, targets = false;
+    bool lint_cache = false, fail_on_new_confirmed = false;
+    unsigned analysis_budget = 0, lint_batch_size = 30, lint_max_units = 0;
+    unsigned lint_budget_seconds = 0;
+    std::string clang_executable = "clang++", tidy_executable = "clang-tidy";
+    std::optional<fs::path> compilation_database, project_rules;
     std::vector<fs::path> include_dirs;
     std::string expect_error;
     std::string action = "audit", subaction, profile = "general", format = "markdown";
@@ -75,6 +98,8 @@ struct Scan {
     std::size_t skipped = 0;
     std::size_t tests_excluded = 0;
     std::size_t capped = 0, capped_files = 0;  // hints dropped by the per-file/per-rule limit
+    std::size_t code_lines = 0, production_lines = 0, test_lines = 0;
+    std::set<std::string> observed_paths;
 };
 
 Options parse_options(bool check_program, const std::vector<std::string>& args);

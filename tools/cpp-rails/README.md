@@ -56,7 +56,7 @@ The `--source` template check is a **standalone compiler invocation**, without t
 | CMake build & CTest (`--configure` opt-in; zero effective tests is UNVERIFIED) | Implemented for CMake; `--config` (default `CMAKE_BUILD_TYPE`, else `Debug`) is passed to both `cmake --build` and `ctest -C`, so multi-config generators work |
 | Native UI hints (`--profile native-ui`) | `CPP-UI-CONNECT-NO-CONTEXT`, `CPP-UI-NESTED-EVENT-LOOP`, `CPP-UI-WINDOW-USERDATA`; parent-owned `new` downgraded to P3 |
 | Subprocesses | argv-based on all platforms: `fork`/`execvp` on POSIX, `CreateProcess` with CRT-compatible quoting on Windows; stdout+stderr captured (128 KiB cap) |
-| clang-tidy from `compile_commands.json` (`--lint`, no auto-fix) | Implemented for at most 30 translation units per call; wider scope marked UNVERIFIED |
+| clang-tidy from `compile_commands.json` (`--lint`, no auto-fix) | Deterministic batches (default 30 units per batch), no fixed project cap; unit/time scheduling budgets and opt-in compiler-dependency cache |
 | ASan+UBSan or separate TSan instrumented CMake builds | Implemented, tool/platform dependent |
 | Positive & negative real template compilation | Implemented for concrete source files |
 | Clang/GCC opt remarks (standalone source) | Implemented; assembly scratch file in OS temp |
@@ -64,20 +64,82 @@ The `--source` template check is a **standalone compiler invocation**, without t
 | GCC/Clang compiler CMake matrix | Implemented opt-in; MSVC environments need native-supported configuration |
 | Optional ABI check using `abidiff` | Implemented where installed |
 | Lifetime warnings for a standalone source | Implemented as opt-in best-effort; flags vary and do not prove lifetime safety |
-| Semantic Clang AST data-flow, project-wide race/UB proof, automated online compiler regression lookup | **Not implemented** |
-| Safety Intelligence contract/evidence workflow | Agent guides and manual templates only; no summary validation, property inference or safety-policy parser in the CLI |
+| Six-dimensional quality evidence (`--score`) | Lexical indicators, independent evidence and signal/KLOC rates; no global grade or architecture mandate; [limits](../../docs/quality.md) |
+| Optional Clang semantic analysis (`--semantic`) | Real compiler AST/type evidence with compilation DB; full file capture, bounded local checks, explicit unknown/coverage; [limits](SEMANTIC_BACKEND.md) |
+| Safety Intelligence (`safety map\|contracts\|boundaries\|regressions`) | Bounded intraprocedural lifetime, release and invalidation contracts; opaque effects unknown; no universal or cross-TU proof |
+| CMake target graph (`topology --targets`) | Existing File API codemodel, dependency edges/cycles, header exposure and fan-out; visibility unknown when not supplied by codemodel; heuristic literal fallback; [limits](ARCHITECTURE.md) |
+| Explicit project constraints (`--rules PATH`) | Reviewed include dependency/API token rules, fail-closed policy parser and expiring justified exceptions; no safety suppression |
+| Baseline evolution and rates | v2 stores provenance/line/evidence, reads v1; new/known/disappeared/unobserved and rule/file deltas; selected code-bearing LOC denominator |
+| Structured refactoring review (`plan`) | Cause/evidence, unverified contract, minimal/structural/leave-as-is alternatives, verification and risks; no source edits |
+| Labeled precision corpus / version consistency | Native CTest runners with per-detector/rule TP/FP/FN and real/synthetic provenance; no project-wide precision claim |
+| General interprocedural data-flow, project-wide race/UB proof, automated online compiler regression lookup | **Not implemented** |
 | Source code refactoring, commits, test auto-updates | **Deliberately not implemented** |
 | Python/Rust tool scripts | **None** |
 
 Safety Intelligence guidance lives in
 [`references/safety-intelligence.md`](../../references/safety-intelligence.md).
-The proposed `safety map`, `safety contracts`, `safety boundaries`,
-`safety regressions` and `--safety-profile strict` interfaces are **not
-implemented**. Existing `--strict` only changes treatment of UNVERIFIED gates;
+The `safety` commands share the bounded analysis described in [SEMANTIC_BACKEND.md](SEMANTIC_BACKEND.md).
+`safety regressions` also requires `--baseline`; disappearance is not a proof of
+a fix. `--safety-profile strict` is **not implemented**. Existing `--strict` only changes treatment of UNVERIFIED gates;
 engineering `--profile` values are not WG21 Safety Profiles. Additional Clang
 diagnostics and MSan require supported project-native commands; there is no
 `--sanitizer msan` mode. The new C++17 safety fixtures validate example behavior
 and compilation, not semantic detection by the scanner.
+
+## v1.4 analysis and evolution
+
+```bash
+cpp-rails-audit audit --root . --score --format json --output quality.json
+cpp-rails-audit audit --root . --semantic --clang clang++ --compilation-database build/compile_commands.json
+cpp-rails-audit safety contracts --root . --compilation-database build/compile_commands.json
+cpp-rails-audit baseline --root . --safety --compilation-database build/compile_commands.json --output baseline.txt
+cpp-rails-audit safety regressions --root . --compilation-database build/compile_commands.json --baseline baseline.txt
+cpp-rails-audit topology --root . --targets --build-dir build
+cpp-rails-audit audit --root . --rules reviewed-rules.toml
+cpp-rails-audit plan --root . --format json --output refactor-plan.json
+cpp-rails-check --root . --build-dir build --lint --lint-batch-size 20 --lint-max-units 200 --lint-budget-seconds 300
+cpp-rails-check --root . --build-dir build --lint --lint-cache --clang clang++
+```
+
+Clang is optional and invoked directly with argv; there is no linked LLVM ABI.
+Missing/incompatible context, unsupported flags and incomplete ASTs are UNVERIFIED.
+`--analysis-budget` limits AST node visits (0 means unlimited); input capture and
+subprocess limits are documented in [SEMANTIC_BACKEND.md](SEMANTIC_BACKEND.md). All findings carry
+`analyzer` and `evidence_level` in JSON/SARIF and Markdown. `verified-structure`
+establishes the reported AST shape, not arbitrary runtime safety.
+
+JSON exposes `metrics`, `baseline_delta` and structured `analyses`; SARIF carries
+these as run properties. Rates use code-bearing selected lines, include capped
+counts separately and are not quality grades. Partial scans leave baseline entries
+unobserved. A profile change also prevents calling missing baseline items resolved.
+Resolved items retain the prior line and evidence for review. `baseline --safety`
+captures bounded effect findings as well as semantic lifetime candidates. Failed
+or incomplete requested analyses preserve the previous baseline and return nonzero.
+Backend mode/configuration changes keep missing findings unobserved.
+`--fail-on-new-confirmed`
+blocks only new unsuppressed P0/P1 findings whose confidence and evidence level
+are both `confirmed`; current heuristic and bounded AST findings are not upgraded.
+
+Lint records analyzed/total units, executed batches and cache hits. Time budgets
+stop scheduling new batches; a running batch finishes. Cache reuse requires Clang's
+complete dependency listing, hashing local/external/system headers, compile DB,
+tool version, root and ancestor `.clang-tidy` configuration. Unknown dependency
+closure bypasses cache. Only successful runs are retained; failed runs execute again.
+Cache is opt-in, stored under `.cpp-rails/lint-cache`, and binds both tool version
+outputs. It assumes matching Clang dependency/tidy frontends and a trusted,
+deterministic build environment without concurrent configuration/file mutation.
+
+The six-dimensional report and plan are review aids. Semantic and target analysis
+execute only when requested. CMake File API replies must already exist: create a
+codemodel-v2 query in a trusted build and configure it using project-native commands.
+No audit action configures the target project. Existing compiler/test verification
+commands and exit codes are preserved.
+
+Native CTest includes quality positive/negative cases, AST cases, real dependency
+cache invalidation, architecture/policy cases, baseline evolution, labeled corpus,
+and documentation/version agreement. Configure `-DCPP_RAILS_REQUIRE_CLANG_TESTS=ON`
+to require a real semantic backend in CI; missing optional runtime coverage is
+reported explicitly. See [the corpus](../../tests/corpus/README.md).
 
 ## Safety and trust model
 

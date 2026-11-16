@@ -1,0 +1,13 @@
+{
+  "repository": "qt/qtbase",
+  "revision": "f6a1e0449f6645d814bfb076df68c6e6dbb87457",
+  "source": "src/corelib/tools/qversionnumber.cpp",
+  "source_url": "https://raw.githubusercontent.com/qt/qtbase/f6a1e0449f6645d814bfb076df68c6e6dbb87457/src/corelib/tools/qversionnumber.cpp",
+  "excerpt_lines": "1-14,238-350",
+  "excerpt_sha256": "977F53E431BE25AB89957322EBCCF4DC836318F4C817E811B719ED0DA9FD6143",
+  "license_path": "LICENSES/GPL-3.0-only.txt",
+  "license_present": true,
+  "license_error": null,
+  "source_sha256": "0A1A175F2BEDC824E533A89C7A81B21E50BACAF10BBE81FEBCD334F85D1BDF79",
+  "license_sha256": "8CEB4B9EE5ADEDDE47B31E975C1D90C73AD27B6B165A1DCD80C7C545EB65B903"
+}

@@ -1,0 +1,27 @@
+Test project C:/Users/luisv/Desarrollo/cpp-engineering-guardrails-v3-cpp-only/cpp-engineering-guardrails/cmake-build-roadmap
+    Start 2: roadmap-regressions
+1/2 Test #2: roadmap-regressions ..............***Failed    0.21 sec
+roadmap options reject invalid budgets: PASS
+baseline delta distinguishes resolved from unobserved: PASS
+old baseline IDs remain loadable: PASS
+semantic PASS cannot resolve findings from another analyzer: FAIL: unexecuted policy was called resolved
+incomplete scans do not resolve missing files: PASS
+analyzer provenance and normalized metrics are serialized: PASS
+scanning counts code rather than comments: PASS
+plan contains contract and reversible alternatives: PASS
+lint handles more than thirty units and explicit limits: PASS
+
+    Start 9: lint-dependency-cache
+2/2 Test #9: lint-dependency-cache ............***Failed    0.67 sec
+{"action":"","root":"","profile":"","files_scanned":0,"files_skipped":0,"findings_capped":0,"summary":{"by_rule":{},"hotspots":[]},"gates":[{"name":"clang-tidy","status":"PASS","details":"1/1 units; 0 executed batches; 1 dependency-validated cache hits","required":true}],"findings":[],"metrics":{"code_lines":0,"production_lines":0,"test_lines":0,"per_kloc":null,"by_rule":{}},"baseline_delta":{"loaded":false,"new":0,"known":0,"unobserved":0,"resolved":[],"by_rule":{},"affected_paths":[]},"analyses":{"lint":{"total":1,"analyzed":1,"cached":1,"batches":0,"cache_bypassed":0,"complete":true}},"notes":["clang-tidy runs without --fix. Project-controlled compiler flags and .clang-tidy affect results. Cache entries retain only successful runs."]}
+
+
+
+0% tests passed, 2 tests failed out of 2
+
+Total Test time (real) =   0.90 sec
+
+The following tests FAILED:
+	  2 - roadmap-regressions (Failed)
+	  9 - lint-dependency-cache (Failed)
+Errors while running CTest

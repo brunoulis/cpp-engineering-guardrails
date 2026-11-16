@@ -1,0 +1,13 @@
+{
+  "repository": "google/benchmark",
+  "revision": "cf4d7fedd59473f99042806fcba407ea767c5327",
+  "source": "src/statistics.cc",
+  "source_url": "https://raw.githubusercontent.com/google/benchmark/cf4d7fedd59473f99042806fcba407ea767c5327/src/statistics.cc",
+  "source_sha256": "84875DAA960DCD9163AB6F04D52D581CEF6F110458CC30E7C031282DF33BFF52",
+  "excerpt_lines": "1-108",
+  "excerpt_sha256": "B48BE017CAE77098BC53310EE2C86E3721E38D96D7EF0DDF9C06B33B316C26F1",
+  "license_path": "LICENSE",
+  "license_present": true,
+  "license_sha256": "CFC7749B96F63BD31C3C42B5C471BF756814053E847C10F3EB003417BC523D30",
+  "origin": "Existing locally pinned 2026-11-14 audit corpus; source and license SHA-256 verified against its files.json"
+}

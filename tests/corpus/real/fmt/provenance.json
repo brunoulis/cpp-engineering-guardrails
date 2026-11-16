@@ -1,0 +1,13 @@
+{
+  "repository": "fmtlib/fmt",
+  "revision": "0e72a3ecec32d46ea012914ea04856bdd343403a",
+  "source": "include/fmt/format.h",
+  "source_url": "https://raw.githubusercontent.com/fmtlib/fmt/0e72a3ecec32d46ea012914ea04856bdd343403a/include/fmt/format.h",
+  "excerpt_lines": "1-31,350-447",
+  "excerpt_sha256": "B4C4569B3518DC256D4DD35C072B16BDAB1785C3713787D9A12454A2C575AD56",
+  "license_path": "LICENSE",
+  "license_present": true,
+  "license_error": null,
+  "source_sha256": "FB4BE3A1B1CB902269A5EBF27F8BA96C6C08EBA529FE8BD98E0DF272CEA7276E",
+  "license_sha256": "A65FCC5A1095FC33CC37E4FFF69366E49D7E92F613558A2B95ED1B70E33758B4"
+}

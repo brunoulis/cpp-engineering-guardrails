@@ -1,0 +1,10 @@
+detector	rule	profile	min_tp	max_fp	max_fn
+lexical	CPP-DETACHED-THREAD	general	1	0	0
+lexical	CPP-INSERT-CONCEPT	general	1	0	0
+lexical	CPP-RAW-ALLOC	general	1	0	0
+lexical	CPP-RAW-ALLOC	native-ui	0	0	0
+lexical	CPP-SHELL-CALL	general	1	0	0
+lexical	CPP-UI-CONNECT-NO-CONTEXT	native-ui	1	0	0
+lexical	CPP-UNBOUNDED-STRING	general	1	0	0
+quality	complexity	general	3	1	1
+quality	duplication	general	1	1	1

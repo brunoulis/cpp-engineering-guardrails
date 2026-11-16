@@ -1,4 +1,9 @@
 #include "cpp_rails.hpp"
+#include "detail.hpp"
+#include "quality.hpp"
+#include "semantic.hpp"
+#include "architecture.hpp"
+#include "lint.hpp"
 
 #include <algorithm>
 #include <array>
@@ -41,6 +46,7 @@
 #endif
 
 namespace cpprails {
+using detail::trim; using detail::read_file; using detail::write_file; using detail::json_quote; using detail::table_safe;
 std::string utf8_bytes(std::u8string_view text) {
     return {text.begin(),text.end()};
 }
@@ -49,12 +55,6 @@ fs::path path_from_utf8(std::string_view text) {
 }
 
 namespace {
-std::string trim(std::string text) {
-    auto a = text.find_first_not_of(" \t\r\n");
-    if (a == std::string::npos) return {};
-    auto b = text.find_last_not_of(" \t\r\n");
-    return text.substr(a, b - a + 1);
-}
 std::string unquote(std::string s) {
     s = trim(s);
     if (s.size() >= 2 && s.front() == '"' && s.back() == '"') return s.substr(1, s.size()-2);
@@ -64,42 +64,8 @@ std::string lower(std::string v) {
     std::transform(v.begin(),v.end(),v.begin(),[](unsigned char c){return static_cast<char>(std::tolower(c));});
     return v;
 }
-std::string read_file(const fs::path& path) {
-    std::ifstream in(path, std::ios::binary);
-    if (!in) throw std::runtime_error("cannot read " + utf8_bytes(path.u8string()));
-    return {std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()};
-}
-void write_file(const fs::path& path, const std::string& data) {
-    auto dir = path.parent_path();
-    if (!dir.empty()) fs::create_directories(dir);
-    std::ofstream out(path, std::ios::binary);
-    if (!out) throw std::runtime_error("cannot write " + utf8_bytes(path.u8string()));
-    out << data;
-    if (!out) throw std::runtime_error("I/O failure writing " + utf8_bytes(path.u8string()));
-}
 fs::path resolve(const fs::path& root, const fs::path& path) {
     return path.is_absolute() ? path : root / path;
-}
-std::string json_quote(const std::string& s) {
-    std::ostringstream result;
-    result << '"';
-    for (unsigned char c : s) {
-        if (c == '\\') result << "\\\\";
-        else if (c == '"') result << "\\\"";
-        else if (c == '\n') result << "\\n";
-        else if (c == '\r') result << "\\r";
-        else if (c == '\t') result << "\\t";
-        else if (c < 32) result << "\\u" << std::hex << std::setw(4) << std::setfill('0') << static_cast<int>(c) << std::dec;
-        else result << static_cast<char>(c);
-    }
-    result << '"';
-    return result.str();
-}
-std::string table_safe(std::string s) {
-    for (std::size_t p=0; (p=s.find('|',p))!=std::string::npos; p+=2) s.replace(p,1,"\\|");
-    std::replace(s.begin(),s.end(),'\n',' ');
-    std::replace(s.begin(),s.end(),'\r',' ');
-    return s;
 }
 std::string evidence_excerpt(std::string s) {
     s=trim(std::move(s));
@@ -139,7 +105,6 @@ bool glob(const std::string& pattern,const std::string& text) {
     while (i<pattern.size() && pattern[i]=='*') ++i;
     return i==pattern.size();
 }
-std::string gate_status_json(Status value) {return json_quote(status_text(value));}
 std::string first_line(const std::string& s) {
     auto pos=s.find('\n'); return trim(s.substr(0,pos));
 }
@@ -169,157 +134,11 @@ std::size_t Report::new_unsuppressed_p2() const {
     return std::count_if(findings.begin(),findings.end(),[](auto& f){return !f.existing && !f.suppressed && f.severity=="P2";});
 }
 
-#ifdef _WIN32
-// Quote one argument so the MSVC CRT (CommandLineToArgvW rules) parses it back verbatim.
-std::string quote_windows_arg(const std::string& arg) {
-    if (!arg.empty() && arg.find_first_of(" \t\n\v\"") == std::string::npos) return arg;
-    std::string quoted = "\"";
-    std::size_t backslashes = 0;
-    for (char c : arg) {
-        if (c == '\\') { ++backslashes; continue; }
-        if (c == '"') quoted.append(backslashes * 2 + 1, '\\');
-        else quoted.append(backslashes, '\\');
-        backslashes = 0;
-        quoted.push_back(c);
-    }
-    quoted.append(backslashes * 2, '\\');
-    quoted.push_back('"');
-    return quoted;
-}
-#endif
-
-Process exec(const std::vector<std::string>& args, const fs::path& cwd, bool separate_error) {
-    Process result;
-    if (args.empty()) return result;
-    constexpr std::size_t output_cap=128*1024;
-#ifdef _WIN32
-    // CreateProcess with an explicitly quoted argv (no cmd.exe interpreter) and a
-    // pipe for stdout+stderr, so evidence and Git output are captured like on POSIX.
-    std::string command_line;
-    for (auto& a:args) {
-        if (!command_line.empty()) command_line.push_back(' ');
-        command_line += quote_windows_arg(a);
-    }
-    SECURITY_ATTRIBUTES sa{};
-    sa.nLength=sizeof(sa);
-    sa.bInheritHandle=TRUE;
-    HANDLE read_end=nullptr, write_end=nullptr;
-    if (!CreatePipe(&read_end,&write_end,&sa,0)) return result;
-    SetHandleInformation(read_end,HANDLE_FLAG_INHERIT,0);
-    HANDLE error_read=nullptr,error_write=nullptr;
-    if(separate_error) {
-        if(!CreatePipe(&error_read,&error_write,&sa,0)){CloseHandle(read_end);CloseHandle(write_end);return result;}
-        SetHandleInformation(error_read,HANDLE_FLAG_INHERIT,0);
-    }
-    HANDLE null_input=CreateFileA("NUL",GENERIC_READ,FILE_SHARE_READ|FILE_SHARE_WRITE,&sa,OPEN_EXISTING,0,nullptr);
-    STARTUPINFOW si{};
-    si.cb=sizeof(si);
-    si.dwFlags=STARTF_USESTDHANDLES;
-    si.hStdInput=null_input;
-    si.hStdOutput=write_end;
-    si.hStdError=separate_error?error_write:write_end;
-    PROCESS_INFORMATION pi{};
-    auto mutable_cmd=path_from_utf8(command_line).wstring();
-    const auto dir=cwd.wstring();
-    const BOOL created=CreateProcessW(nullptr,mutable_cmd.data(),nullptr,nullptr,TRUE,0,nullptr,
-                                      dir.empty()?nullptr:dir.c_str(),&si,&pi);
-    CloseHandle(write_end);
-    if(error_write)CloseHandle(error_write);
-    if (null_input!=INVALID_HANDLE_VALUE) CloseHandle(null_input);
-    if (!created) {CloseHandle(read_end);if(error_read)CloseHandle(error_read);return result;}
-    result.started=true;
-    std::array<char,8192> buffer{};
-    if(separate_error) {
-        // Drain both streams while the child runs. Each stored stream is bounded;
-        // continue draining after the cap so a verbose child cannot deadlock.
-        std::array<HANDLE,2> pipes{read_end,error_read};
-        std::array<std::string*,2> outputs{&result.output,&result.error_output};
-        while(pipes[0]||pipes[1]) {
-            bool progressed=false;
-            for(std::size_t i=0;i<2;++i)if(pipes[i]) {
-                DWORD available=0,count=0;
-                if(!PeekNamedPipe(pipes[i],nullptr,0,nullptr,&available,nullptr)) {
-                    CloseHandle(pipes[i]);pipes[i]=nullptr;continue;
-                }
-                if(available&&ReadFile(pipes[i],buffer.data(),static_cast<DWORD>(std::min<std::size_t>(available,buffer.size())),&count,nullptr)) {
-                    progressed=true;auto& output=*outputs[i];
-                    if(output.size()<output_cap)output.append(buffer.data(),std::min<std::size_t>(count,output_cap-output.size()));
-                }
-            }
-            if(!progressed&&(pipes[0]||pipes[1]))Sleep(1);
-        }
-    } else for (;;) {
-        DWORD count=0;
-        if (!ReadFile(read_end,buffer.data(),static_cast<DWORD>(buffer.size()),&count,nullptr) || count==0) break;
-        if (result.output.size()<output_cap)
-            result.output.append(buffer.data(),std::min<std::size_t>(count,output_cap-result.output.size()));
-    }
-    if(!separate_error)CloseHandle(read_end);
-    WaitForSingleObject(pi.hProcess,INFINITE);
-    DWORD code=0;
-    if (GetExitCodeProcess(pi.hProcess,&code)) result.exit_code=static_cast<int>(code);
-    CloseHandle(pi.hThread);
-    CloseHandle(pi.hProcess);
-#else
-    int fds[2];
-    if (pipe(fds)!=0) return result;
-    int errors[2]={-1,-1};
-    if(separate_error&&pipe(errors)!=0){close(fds[0]);close(fds[1]);return result;}
-    pid_t pid=fork();
-    if (pid<0) {close(fds[0]);close(fds[1]);if(separate_error){close(errors[0]);close(errors[1]);}return result;}
-    if (pid==0) {
-        close(fds[0]);
-        dup2(fds[1],STDOUT_FILENO);
-        dup2(separate_error?errors[1]:fds[1],STDERR_FILENO);
-        if(separate_error){close(errors[0]);close(errors[1]);}
-        close(fds[1]);
-        if (chdir(cwd.c_str())!=0) _exit(126);
-        std::vector<char*> argv;
-        argv.reserve(args.size()+1);
-        for (auto& a:args) argv.push_back(const_cast<char*>(a.c_str()));
-        argv.push_back(nullptr);
-        execvp(argv[0],argv.data());
-        _exit(127);
-    }
-    close(fds[1]);result.started=true;
-    if(separate_error)close(errors[1]);
-    std::array<char,8192> buffer{};
-    if(separate_error) {
-        std::array<pollfd,2> pipes{{{fds[0],POLLIN,0},{errors[0],POLLIN,0}}};
-        std::array<std::string*,2> outputs{&result.output,&result.error_output};
-        while(pipes[0].fd>=0||pipes[1].fd>=0) {
-            if(poll(pipes.data(),pipes.size(),-1)<0){if(errno==EINTR)continue;break;}
-            for(std::size_t i=0;i<2;++i)if(pipes[i].fd>=0&&pipes[i].revents) {
-                const auto count=read(pipes[i].fd,buffer.data(),buffer.size());
-                if(count<0&&errno==EINTR)continue;
-                if(count<=0){close(pipes[i].fd);pipes[i].fd=-1;continue;}
-                auto& output=*outputs[i];
-                if(output.size()<output_cap)output.append(buffer.data(),std::min(static_cast<std::size_t>(count),output_cap-output.size()));
-            }
-        }
-        for(const auto& pipe:pipes)if(pipe.fd>=0)close(pipe.fd);
-    } else for (;;) {
-        ssize_t count=read(fds[0],buffer.data(),buffer.size());
-        if (count==0) break;
-        if (count<0) {if (errno==EINTR) continue;break;}
-        if (result.output.size()<output_cap) {
-            result.output.append(buffer.data(),std::min(static_cast<std::size_t>(count), output_cap-result.output.size()));
-        }
-    }
-    if(!separate_error)close(fds[0]);int status=0;
-    if (waitpid(pid,&status,0)==pid) {
-        result.exit_code=WIFEXITED(status)?WEXITSTATUS(status): (WIFSIGNALED(status)?128+WTERMSIG(status):-1);
-    }
-    if (result.exit_code==127 && result.output.empty()) result.started=false;
-#endif
-    return result;
-}
-
 std::string usage(bool check_program) {
     std::ostringstream o;
     o << (check_program ? "cpp-rails-check" : "cpp-rails-audit") << " — C++23 native engineering guardrails\n";
     o << (check_program ? "Usage: cpp-rails-check [options]\n" :
-          "Usage: cpp-rails-audit [audit|triage|topology|baseline|templates|perf compare|perf analyze] [options]\n");
+          "Usage: cpp-rails-audit [audit|triage|plan|topology|baseline|safety map|safety contracts|safety boundaries|safety regressions|templates|perf compare|perf analyze] [options]\n");
     o << "  --root PATH           C++ project root (default '.')\n"
       << "  --profile NAME        general|low-latency|library-sdk|legacy-code|engine|service|native-ui|ffi|prototype\n"
       << "  --profile-file PATH   Explicit, reviewed TOML profile (never auto-load from target)\n"
@@ -344,6 +163,20 @@ std::string usage(bool check_program) {
       << "  --configure           Configure project if build directory not configured\n"
       << "  --no-build, --no-tests Explicitly skip required project gates (report UNVERIFIED)\n"
       << "  --lint                Run clang-tidy (requires compilation database)\n"
+      << "  --score               Six independent quality indicators, evidence and rates (no global grade)\n"
+      << "  --semantic            Optional Clang AST analysis; requires compilation database\n"
+      << "  --safety              Include bounded safety effects (also for 'baseline')\n"
+      << "  --clang EXE           Clang executable for semantic/dependency analysis\n"
+      << "  --compilation-database PATH  Explicit compile_commands.json or its directory\n"
+      << "  --analysis-budget N   AST node budget (0 = unlimited); exhausted scope UNVERIFIED\n"
+      << "  --targets             Include CMake target topology from existing File API replies\n"
+      << "  --rules PATH          Explicit reviewed project dependency/API policy\n"
+      << "  --fail-on-new-confirmed  Block new confirmed P0/P1 findings; heuristics remain review items\n"
+      << "  --tidy EXE            clang-tidy executable (default clang-tidy)\n"
+      << "  --lint-batch-size N   Units per lint batch (default 30; no project cap)\n"
+      << "  --lint-max-units N    Optional unit budget (0 = unlimited)\n"
+      << "  --lint-budget-seconds N  Stop scheduling batches after N seconds (0 = unlimited)\n"
+      << "  --lint-cache          Opt-in success cache with compiler dependency invalidation\n"
       << "  --sanitizer MODE      asan-ubsan|tsan (separate isolated builds)\n"
       << "  --compiler-matrix L   Comma-separated supported compiler paths\n"
       << "  --abi-old PATH --abi-new PATH  Compare public binaries using abidiff\n"
@@ -357,15 +190,27 @@ Options parse_options(bool check_program,const std::vector<std::string>& args) {
     if (check_program) opt.action="check";
     else if (i<args.size() && !args[i].empty() && args[i][0]!='-') {
         opt.action=args[i++];
-        if (opt.action=="perf" && i<args.size() && !args[i].empty() && args[i][0]!='-') opt.subaction=args[i++];
+        if ((opt.action=="perf"||opt.action=="safety") && i<args.size() && !args[i].empty() && args[i][0]!='-') opt.subaction=args[i++];
     }
-    const std::set<std::string> actions={"audit","triage","topology","baseline","templates","perf"};
+    const std::set<std::string> actions={"audit","triage","plan","topology","baseline","templates","perf","safety"};
     if (!check_program && !actions.count(opt.action)) throw std::runtime_error("unsupported action: "+opt.action);
     if (opt.action=="perf" && opt.subaction!="compare" && opt.subaction!="analyze")
         throw std::runtime_error("perf requires 'compare' or 'analyze'");
+    if(opt.action=="safety") {
+        if(opt.subaction!="map"&&opt.subaction!="contracts"&&opt.subaction!="boundaries"&&opt.subaction!="regressions")
+            throw std::runtime_error("safety requires map, contracts, boundaries or regressions");
+        opt.safety=true;opt.semantic=true;
+    }
     auto next=[&](const std::string& name) {
         if (++i>=args.size() || args[i].empty()) throw std::runtime_error("missing value for "+name);
         return args[i];
+    };
+    auto number=[&](const std::string& name, bool zero=true) {
+        const auto value=next(name);
+        if(value.find_first_not_of("0123456789")!=std::string::npos)throw std::runtime_error("invalid integer for "+name);
+        const auto parsed=std::stoull(value);
+        if(parsed>std::numeric_limits<unsigned>::max()||(!zero&&parsed==0))throw std::runtime_error("out of range "+name);
+        return static_cast<unsigned>(parsed);
     };
     for (;i<args.size();++i) {
         const auto a=args[i];
@@ -393,6 +238,20 @@ Options parse_options(bool check_program,const std::vector<std::string>& args) {
         else if(a=="--no-build") opt.no_build=true;
         else if(a=="--no-tests") opt.no_tests=true;
         else if(a=="--lint") opt.lint=true;
+        else if(a=="--score") opt.score=true;
+        else if(a=="--semantic") opt.semantic=true;
+        else if(a=="--safety") {opt.safety=true;opt.semantic=true;}
+        else if(a=="--clang") opt.clang_executable=next(a);
+        else if(a=="--compilation-database") opt.compilation_database=path_from_utf8(next(a));
+        else if(a=="--analysis-budget") opt.analysis_budget=number(a);
+        else if(a=="--targets") opt.targets=true;
+        else if(a=="--rules") opt.project_rules=path_from_utf8(next(a));
+        else if(a=="--fail-on-new-confirmed") opt.fail_on_new_confirmed=true;
+        else if(a=="--tidy") opt.tidy_executable=next(a);
+        else if(a=="--lint-batch-size") opt.lint_batch_size=number(a,false);
+        else if(a=="--lint-max-units") opt.lint_max_units=number(a);
+        else if(a=="--lint-budget-seconds") opt.lint_budget_seconds=number(a);
+        else if(a=="--lint-cache") opt.lint_cache=true;
         else if(a=="--sanitizer") opt.sanitizer=next(a);
         else if(a=="--compiler-matrix") opt.compiler_matrix=next(a);
         else if(a=="--abi-old") opt.abi_old=path_from_utf8(next(a));
@@ -419,167 +278,6 @@ Options parse_options(bool check_program,const std::vector<std::string>& args) {
             throw std::runtime_error("--config must be an alphanumeric CMake configuration name");
     }
     return opt;
-}
-
-namespace {
-struct RuleTally {std::size_t production_p2=0,production_p3=0,test=0;};
-std::map<std::string,RuleTally> tally_by_rule(const Report& r) {
-    std::map<std::string,RuleTally> out;
-    for (auto& f:r.findings) {
-        if (f.suppressed) continue;
-        auto& t=out[f.rule];
-        if (f.scope=="test") ++t.test;
-        else if (f.severity=="P2") ++t.production_p2;
-        else ++t.production_p3;
-    }
-    return out;
-}
-// Production files with the most unsuppressed hints: where a human reviewer should start.
-std::vector<std::pair<std::string,std::size_t>> hotspots(const Report& r,std::size_t limit=10) {
-    std::map<std::string,std::size_t> counts;
-    for (auto& f:r.findings) if (!f.suppressed && f.scope!="test" && f.severity=="P2") ++counts[f.path];
-    std::vector<std::pair<std::string,std::size_t>> ranked(counts.begin(),counts.end());
-    std::stable_sort(ranked.begin(),ranked.end(),[](auto& a,auto& b){return a.second>b.second;});
-    if (ranked.size()>limit) ranked.resize(limit);
-    return ranked;
-}
-std::string uri_escape(const std::string& s) {
-    std::ostringstream o;
-    for (unsigned char c:s) {
-        if (std::isalnum(c)||c=='/'||c=='-'||c=='_'||c=='.'||c=='~'||c==':') o<<c;
-        else o<<'%'<<std::uppercase<<std::hex<<std::setw(2)<<std::setfill('0')<<static_cast<int>(c)<<std::nouppercase<<std::dec;
-    }
-    return o.str();
-}
-} // namespace
-
-std::string markdown(const Report& r) {
-    std::ostringstream out;
-    const auto production=std::count_if(r.findings.begin(),r.findings.end(),[](auto& f){return f.scope!="test";});
-    out << "# cpp-engineering-guardrails — " << r.action << "\n\n"
-        << "- Root: `" << r.root << "`\n- Profile: `" << r.profile << "`\n"
-        << "- Files scanned: " << r.files_scanned << "; skipped: " << r.files_skipped << "\n"
-        << "- Heuristic findings: " << r.findings.size() << " (" << production << " production, "
-        << (r.findings.size()-static_cast<std::size_t>(production)) << " test; "
-        << r.new_unsuppressed_p2() << " new, unsuppressed P2)"
-        << (r.findings_capped?"; "+std::to_string(r.findings_capped)+" more not listed (per-file limit)":"") << "\n\n";
-    const auto tallies=tally_by_rule(r);
-    if (!tallies.empty()) {
-        out << "## Summary by rule\n\n| Rule | Production P2 | Production P3 | Test (P3) |\n|---|---|---|---|\n";
-        std::vector<std::pair<std::string,RuleTally>> rows(tallies.begin(),tallies.end());
-        std::stable_sort(rows.begin(),rows.end(),[](auto& a,auto& b){return a.second.production_p2>b.second.production_p2;});
-        for (auto& [rule,t]:rows) out << "| " << rule << " | " << t.production_p2 << " | " << t.production_p3 << " | " << t.test << " |\n";
-        const auto hot=hotspots(r);
-        if (!hot.empty()) {
-            out << "\n**Review first (production files with most P2 hints):** ";
-            for (std::size_t i=0;i<hot.size();++i) out << (i?", ":"") << '`' << table_safe(hot[i].first) << "` (" << hot[i].second << ")";
-            out << "\n";
-        }
-        out << "\n";
-    }
-    out << "## Verification gates\n\n| Gate | Status | Required | Evidence |\n|---|---|---|---|\n";
-    if (r.gates.empty()) out << "| — | UNVERIFIED | no | No external verification requested |\n";
-    for (auto& g:r.gates) out << "| " << table_safe(g.name) << " | **" << status_text(g.status) << "** | "
-        << (g.required?"yes":"no") << " | " << table_safe(g.details.substr(0,450)) << " |\n";
-    out << "\n## Findings (review candidates, NOT proven defects)\n\n| Priority | Rule / ID | Location | Scope | Confidence | State |\n|---|---|---|---|---|---|\n";
-    std::size_t shown=0;
-    for (auto& f:r.findings) {
-        if (++shown>200) break;
-        out << "| " << f.severity << " | " << table_safe(f.rule) << "/`" << f.id << "` | `"
-            << table_safe(f.path) << "`:" << f.line << " | " << f.scope << " | " << f.confidence << " | "
-            << (f.suppressed?"suppressed":(f.existing?"baseline":"new")) << " |\n";
-    }
-    if (r.findings.size()>200) out << "\nFirst 200 of " << r.findings.size() << " findings shown; use JSON for all.\n";
-    out << "\n### Review instructions (first 25)\n";
-    for (std::size_t j=0;j<std::min<std::size_t>(r.findings.size(),25);++j) {
-        auto& f=r.findings[j];
-        out << "- **"<<f.id<<"** "<<table_safe(f.message)<<" (`"<<table_safe(f.path)<<"`:"<<f.line<<"). Evidence `"
-            <<table_safe(f.evidence)<<"`. "<<table_safe(f.recommendation)<<"\n";
-    }
-    out << "\n## Notes and limitations\n";
-    for (auto& note:r.notes) out << "- " << note << "\n";
-    out << "\nScanner hints are not semantic proof. Missing tool checks are UNVERIFIED, not green. This report does not certify correctness, memory safety or ABI stability.\n";
-    return out.str();
-}
-std::string json(const Report& r) {
-    std::ostringstream out;
-    out<<"{\"action\":"<<json_quote(r.action)<<",\"root\":"<<json_quote(r.root)
-       <<",\"profile\":"<<json_quote(r.profile)<<",\"files_scanned\":"<<r.files_scanned
-       <<",\"files_skipped\":"<<r.files_skipped<<",\"findings_capped\":"<<r.findings_capped<<",\"summary\":{\"by_rule\":{";
-    {
-        bool first=true;
-        for (auto& [rule,t]:tally_by_rule(r)) {
-            if(!first)out<<',';first=false;
-            out<<json_quote(rule)<<":{\"production_p2\":"<<t.production_p2<<",\"production_p3\":"<<t.production_p3<<",\"test\":"<<t.test<<'}';
-        }
-        out<<"},\"hotspots\":[";
-        const auto hot=hotspots(r);
-        for (std::size_t i=0;i<hot.size();++i) {if(i)out<<',';out<<"{\"path\":"<<json_quote(hot[i].first)<<",\"p2\":"<<hot[i].second<<'}';}
-        out<<"]},\"gates\":[";
-    }
-    for (std::size_t i=0;i<r.gates.size();++i) {
-        if (i) out<<',';
-        const auto& g=r.gates[i];
-        out<<"{\"name\":"<<json_quote(g.name)<<",\"status\":"<<gate_status_json(g.status)
-           <<",\"details\":"<<json_quote(g.details)<<",\"required\":"<<(g.required?"true":"false")<<'}';
-    }
-    out<<"],\"findings\":[";
-    for (std::size_t i=0;i<r.findings.size();++i) {
-        if (i) out<<',';
-        const auto& f=r.findings[i];
-        out<<"{\"id\":"<<json_quote(f.id)<<",\"rule\":"<<json_quote(f.rule)
-           <<",\"severity\":"<<json_quote(f.severity)<<",\"confidence\":"<<json_quote(f.confidence)
-           <<",\"path\":"<<json_quote(f.path)<<",\"line\":"<<f.line
-           <<",\"message\":"<<json_quote(f.message)<<",\"evidence\":"<<json_quote(f.evidence)
-           <<",\"recommendation\":"<<json_quote(f.recommendation)
-           <<",\"scope\":"<<json_quote(f.scope)
-           <<",\"existing\":"<<(f.existing?"true":"false")
-           <<",\"suppressed\":"<<(f.suppressed?"true":"false")<<'}';
-    }
-    out<<"],\"notes\":[";
-    for (std::size_t i=0;i<r.notes.size();++i){if(i)out<<',';out<<json_quote(r.notes[i]);}
-    out<<"]}\n";return out.str();
-}
-
-// SARIF 2.1.0 for GitHub code scanning / VS Code SARIF viewer. Heuristic hints map to
-// "warning" (P2) or "note" (P3); gates are attached as run properties, never as results.
-std::string sarif(const Report& r) {
-    std::map<std::string,const Finding*> rule_examples;
-    for (auto& f:r.findings) rule_examples.emplace(f.rule,&f);
-    std::ostringstream out;
-    out<<"{\"$schema\":\"https://json.schemastore.org/sarif-2.1.0.json\",\"version\":\"2.1.0\",\"runs\":[{"
-       <<"\"tool\":{\"driver\":{\"name\":\"cpp-rails\",\"version\":\"1.3.0\",\"rules\":[";
-    bool first=true;
-    for (auto& [rule,f]:rule_examples) {
-        if(!first)out<<',';first=false;
-        out<<"{\"id\":"<<json_quote(rule)<<",\"shortDescription\":{\"text\":"<<json_quote(f->message)
-           <<"},\"help\":{\"text\":"<<json_quote(f->recommendation)<<"}}";
-    }
-    std::string root_uri=utf8_bytes(path_from_utf8(r.root).generic_u8string());
-    if (root_uri.empty() || root_uri.back()!='/') root_uri.push_back('/');
-    if (root_uri.front()!='/') root_uri="/"+root_uri;
-    out<<"]}},\"originalUriBaseIds\":{\"SRCROOT\":{\"uri\":"<<json_quote("file://"+uri_escape(root_uri))<<"}},\"results\":[";
-    first=true;
-    for (auto& f:r.findings) {
-        if(!first)out<<',';first=false;
-        out<<"{\"ruleId\":"<<json_quote(f.rule)<<",\"level\":"<<json_quote(f.severity=="P2"?"warning":"note")
-           <<",\"message\":{\"text\":"<<json_quote(f.message+". "+f.recommendation)<<"}"
-           <<",\"locations\":[{\"physicalLocation\":{\"artifactLocation\":{\"uri\":"<<json_quote(uri_escape(f.path))
-           <<",\"uriBaseId\":\"SRCROOT\"},\"region\":{\"startLine\":"<<std::max<std::size_t>(f.line,1)<<"}}}]"
-           <<",\"partialFingerprints\":{\"cppRailsId/v1\":"<<json_quote(f.id)<<"}"
-           <<",\"properties\":{\"priority\":"<<json_quote(f.severity)<<",\"scope\":"<<json_quote(f.scope)
-           <<",\"confidence\":"<<json_quote(f.confidence)<<",\"baseline\":"<<(f.existing?"true":"false")<<'}';
-        if (f.suppressed) out<<",\"suppressions\":[{\"kind\":\"external\",\"justification\":\"reviewed exception\"}]";
-        out<<'}';
-    }
-    out<<"],\"properties\":{\"profile\":"<<json_quote(r.profile)<<",\"gates\":[";
-    for (std::size_t i=0;i<r.gates.size();++i) {
-        if(i)out<<',';
-        out<<"{\"name\":"<<json_quote(r.gates[i].name)<<",\"status\":"<<json_quote(status_text(r.gates[i].status))
-           <<",\"required\":"<<(r.gates[i].required?"true":"false")<<'}';
-    }
-    out<<"]}}]}\n";
-    return out.str();
 }
 
 std::string relative_path(const fs::path& file,const fs::path& root) {
@@ -625,7 +323,7 @@ std::set<std::string> changed_paths(const fs::path& root,std::vector<std::string
 }
 namespace {
 const std::set<std::string> excluded={".git",".svn","target","build","_build",".cpp-rails","node_modules",
-    "vendor","third_party","external","_deps","generated",".cache","out","dist","cmake-build-debug","cmake-build-release"};
+    "vendor","third_party","external","_deps","generated",".cache","out","dist","CMakeFiles",".worktrees",".superpowers","cmake-build-debug","cmake-build-release"};
 bool is_source(const fs::path& p) {
     const auto ext=lower(utf8_bytes(p.extension().u8string()));
     return std::set<std::string>{".cpp",".cc",".cxx",".c",".h",".hpp",".hh",".hxx",".ipp",".tpp",".ixx"}.count(ext)!=0;
@@ -814,7 +512,8 @@ Scan scan(const fs::path& root,const std::optional<std::set<std::string>>& chang
         if(ec){++scan_result.skipped;ec.clear();it.increment(ec);continue;}
         if(symlink) {++scan_result.skipped;it.disable_recursion_pending();it.increment(ec);continue;}
         if(it->is_directory(ec)) {
-            if(excluded.count(utf8_bytes(path.filename().u8string()))) it.disable_recursion_pending();
+            const auto directory=utf8_bytes(path.filename().u8string());
+            if(excluded.count(directory)||directory.starts_with("cmake-build-")) it.disable_recursion_pending();
         } else if(it->is_regular_file(ec) && is_source(path)) {
             const auto rel=relative_path(path,root);
             if (exclude_tests && path_is_test(rel)) ++scan_result.tests_excluded;
@@ -833,7 +532,13 @@ Scan scan(const fs::path& root,const std::optional<std::set<std::string>>& chang
         try {raw=read_file(p);}catch(const std::exception& e){++scan_result.skipped;scan_result.notes.push_back(e.what());continue;}
         const auto masked=mask_code(raw);
         const auto filename=relative_path(p,root);
+        scan_result.observed_paths.insert(filename);
         const bool test_file=path_is_test(filename);
+        std::istringstream code_lines(masked);std::string code_line;
+        while(std::getline(code_lines,code_line))if(!trim(code_line).empty()) {
+            ++scan_result.code_lines;
+            if(test_file)++scan_result.test_lines;else ++scan_result.production_lines;
+        }
         // Pre-pass: identifiers declared as threads, so `.detach()` on e.g. SkPath is not a thread hint.
         std::set<std::string> thread_names;
         static const std::regex thread_decl(R"(\bj?thread\s+(\w+)\s*[({;=])");
@@ -911,25 +616,6 @@ Profile load_profile(const Options& opt,const fs::path& root,Report& report) {
         throw std::runtime_error("invalid performance limits in profile");
     return p;
 }
-void load_baseline(const fs::path& file,Report& report) {
-    const auto data=read_file(file);
-    std::istringstream in(data);
-    std::string line;std::set<std::string> ids;
-    while(std::getline(in,line)) {
-        line=trim(line);if(line.empty()||line[0]=='#')continue;
-        ids.insert(line.substr(0,line.find('\t')));
-    }
-    for(auto& f:report.findings)f.existing=ids.count(f.id)!=0;
-    report.notes.push_back("Reviewed baseline loaded: "+std::to_string(ids.size())+" IDs (does NOT suppress failing tests)");
-}
-void write_baseline(const fs::path& file,const Report& report) {
-    std::vector<const Finding*> sorted;
-    for(auto& f:report.findings)sorted.push_back(&f);
-    std::sort(sorted.begin(),sorted.end(),[](auto a,auto b){return a->id<b->id;});
-    std::ostringstream out;out<<"# cpp-rails heuristic baseline v1 — manually review before adopting\n";
-    for(auto f:sorted)out<<f->id<<'\t'<<f->path<<'\t'<<f->rule<<'\n';
-    write_file(file,out.str());
-}
 void apply_exceptions(const fs::path& file,Report& report) {
     if (!fs::exists(file)) return;
     struct Exception {std::string id,path,owner,reason,expires;};
@@ -954,7 +640,7 @@ void apply_exceptions(const fs::path& file,Report& report) {
         if(e.expires<today){report.notes.push_back("Rejected expired suppression "+e.id);continue;}
         bool matched=false;
         for(auto& f:report.findings) {
-            if(f.id==e.id&&glob(e.path,f.path)&&(f.severity=="P2"||f.severity=="P3")) {
+            if(f.id==e.id&&glob(e.path,f.path)&&f.evidence_level=="heuristic"&&(f.severity=="P2"||f.severity=="P3")) {
                 f.suppressed=true;matched=true;
             }
         }
@@ -1236,24 +922,6 @@ void cmake_gate(const Options& opt,const fs::path& root,const Profile& profile,R
         ctest_gate(build,build_config(opt,build),"CTest",profile.require_tests,report);
     }
 }
-void lint_gate(const Options& opt,const fs::path& root,const std::vector<fs::path>& files,Report& report,bool required) {
-    const auto build=resolve(root,opt.build_dir.value_or(fs::path("build")));
-    if(!fs::is_regular_file(build/"compile_commands.json")) {
-        report.gate("clang-tidy",Status::Unverified,"compilation database missing; configure with CMAKE_EXPORT_COMPILE_COMMANDS=ON",required);return;
-    }
-    std::vector<fs::path> units;
-    for(auto& path:files)if(!is_header(path)&&lower(utf8_bytes(path.extension().u8string()))!=".c")units.push_back(path);
-    if (units.empty()) {
-        report.gate("clang-tidy",Status::NotApplicable,"no C++ translation units in selected scope",false);return;
-    }
-    if(units.size()>30) {
-        report.gate("clang-tidy",Status::Unverified,"scope has "+std::to_string(units.size())+" translation units; CLI limit is 30 to avoid surprise long-running repository scan",required);return;
-    }
-    std::vector<std::string> argv={"clang-tidy","-p",utf8_bytes(build.u8string()),"--warnings-as-errors=*"};
-    for(auto& f:units)argv.push_back(utf8_bytes(f.u8string()));
-    const auto r=exec(argv,root);record_command(report,"clang-tidy",r,required);
-    report.notes.push_back("clang-tidy runs without --fix; project .clang-tidy policy and compiler database may alter warnings");
-}
 void abi_gate(const Options& opt,const fs::path& root,Report& report,bool required) {
     if(!opt.abi_old || !opt.abi_new){
         report.gate("ABI compatibility",Status::Unverified,"need both --abi-old and --abi-new for libabigail comparison",required);return;
@@ -1376,7 +1044,34 @@ int dispatch(const Options& opt,Report& report) {
         }
         report.files_scanned=result.files.size();report.files_skipped=result.skipped;
         report.findings_capped=result.capped;
+        report.code_lines=result.code_lines;report.production_lines=result.production_lines;report.test_lines=result.test_lines;
+        report.scanned_paths=result.observed_paths;
+        report.scan_complete=!changed&&result.skipped==0&&result.capped==0&&result.notes.empty()&&!opt.exclude_tests;
         report.findings=std::move(result.findings);
+        if(opt.score) {
+            const auto quality=quality_score(root,result.files);
+            report.sections.push_back({"quality",quality_json(quality),quality_markdown(quality)});
+        }
+        if(opt.semantic||opt.safety)analyze_semantic(opt,root,result.files,report);
+        if(opt.targets)analyze_architecture(opt,root,result.files,report);
+        if(opt.project_rules)apply_project_rules(resolve(root,*opt.project_rules),root,result.files,report);
+        for(const auto& gate:report.gates)if(gate.status==Status::Pass) {
+            if(gate.name=="semantic") {
+                auto db=opt.compilation_database?resolve(root,*opt.compilation_database):
+                    fs::is_regular_file(root/"compile_commands.json")?root/"compile_commands.json":resolve(root,opt.build_dir.value_or(fs::path("build")))/"compile_commands.json";
+                if(fs::is_directory(db))db/="compile_commands.json";
+                if(fs::is_regular_file(db)) {
+                    report.completed_analyzers.insert("clang-ast");
+                    report.analyzer_contexts["clang-ast"]=make_id("semantic-context",opt.safety?"safety":"semantic",opt.clang_executable+read_file(db),0);
+                }
+            } else if(gate.name=="project rules"&&opt.project_rules) {
+                report.completed_analyzers.insert("project-rules");
+                report.analyzer_contexts["project-rules"]=make_id("policy-context",utf8_bytes(opt.project_rules->u8string()),read_file(resolve(root,*opt.project_rules)),0);
+            } else if(gate.name=="CMake target topology") {
+                report.completed_analyzers.insert("cmake-codemodel");
+                report.analyzer_contexts["cmake-codemodel"]=make_id("cmake-context",utf8_bytes(opt.build_dir.value_or(fs::path("build")).u8string()),opt.config.value_or(""),0);
+            }
+        }
         // Production P2 first so the 200-row Markdown table and SARIF consumers see what matters.
         std::stable_sort(report.findings.begin(),report.findings.end(),[](const Finding& a,const Finding& b){
             return std::tuple(a.scope=="test",a.severity)<std::tuple(b.scope=="test",b.severity);
@@ -1384,12 +1079,18 @@ int dispatch(const Options& opt,Report& report) {
         report.notes.insert(report.notes.end(),result.notes.begin(),result.notes.end());
         report.notes.push_back("Pattern scanning uses a lightweight C++ lexer; heuristics are SUSPECTED and cannot establish P0/P1, UB, concurrency or semantic correctness");
         if(opt.action=="baseline") {
+            if(report.files_skipped||report.findings_capped)
+                report.gate("baseline source coverage",Status::Unverified,"source inventory skipped files or capped findings; previous baseline preserved");
+            if(report.has_failure())return 1;
+            if(report.required_unverified()||(opt.strict&&report.any_unverified()))return 2;
             const auto file=resolve(root,opt.output.value_or(fs::path(".cpp-rails/baseline.txt")));
             write_baseline(file,report);
             report.gate("heuristic baseline",Status::Pass,"wrote "+std::to_string(report.findings.size())+" candidate IDs to "+utf8_bytes(file.u8string())+"; manually review");
             return 0;
         }
         if(opt.baseline)load_baseline(resolve(root,*opt.baseline),report);
+        if(opt.action=="safety"&&opt.subaction=="regressions"&&!opt.baseline)
+            report.gate("safety regression baseline",Status::Unverified,"safety regressions requires a reviewed --baseline; no fixed/new claim is available");
         apply_exceptions(resolve(root,opt.exception_file.value_or(fs::path(".cpp-rails/exceptions.toml"))),report);
         if(opt.action=="topology") {
             std::vector<fs::path> dirs;
@@ -1408,10 +1109,27 @@ int dispatch(const Options& opt,Report& report) {
             });
             report.notes.push_back("Triage ranks NEW unsuppressed hints first; verify every candidate before recommending a refactor");
         }
+        if(opt.action=="plan") {
+            std::ostringstream data,md;data<<"[";md<<"## Refactoring review plan\n\n";
+            for(std::size_t i=0;i<report.findings.size();++i) {
+                const auto& f=report.findings[i];if(i)data<<',';
+                const auto contract="UNVERIFIED: establish ownership, observable behavior, public API/ABI and failure guarantees at "+f.path+":"+std::to_string(f.line);
+                const auto minimal="Verify the candidate and change only the affected expression or owner. "+f.recommendation;
+                const auto structural="Consider a boundary or ownership change only if call/dependency and consumer evidence establishes a benefit.";
+                const auto leave="Keep the implementation if the suspected defect is disproved or migration costs outweigh evidenced benefit; record the reason.";
+                const auto verify="Reproduce the issue; run affected target, regression and consumer tests; add sanitizer/ABI checks when the contract requires them.";
+                const auto risks="Unverified contracts, semantic drift, error/cleanup changes, ABI incompatibility and performance regressions require review.";
+                data<<"{\"finding\":"<<json_quote(f.id)<<",\"cause\":"<<json_quote(f.message)<<",\"evidence\":"<<json_quote(f.evidence)
+                    <<",\"contract\":"<<json_quote(contract)<<",\"minimal\":"<<json_quote(minimal)<<",\"structural\":"<<json_quote(structural)
+                    <<",\"leave_as_is\":"<<json_quote(leave)<<",\"verification\":"<<json_quote(verify)<<",\"risks\":"<<json_quote(risks)<<'}';
+                if(i<25)md<<"- `"<<f.id<<"`: "<<contract<<"\n  - Minimal: "<<minimal<<"\n  - Structural: "<<structural<<"\n  - Leave as is: "<<leave<<"\n  - Verification: "<<verify<<"\n  - Risks: "<<risks<<"\n";
+            }
+            data<<"]";report.sections.push_back({"refactor_plan",data.str(),md.str()});
+        }
         if(opt.action=="templates")template_gate(opt,root,report);
         if(opt.check_program) {
             cmake_gate(opt,root,profile,report);
-            if(opt.lint||profile.require_lint)lint_gate(opt,root,result.files,report,opt.lint||profile.require_lint);
+            if(opt.lint||profile.require_lint)run_lint(opt,root,result.files,report,opt.lint||profile.require_lint);
             if(opt.sanitizer=="asan-ubsan"||profile.require_asan_ubsan)sanitizer_gate(opt,root,"asan-ubsan",report);
             if(opt.sanitizer=="tsan"||profile.require_tsan)sanitizer_gate(opt,root,"tsan",report);
             compiler_matrix_gate(opt,root,report);
@@ -1426,6 +1144,12 @@ int dispatch(const Options& opt,Report& report) {
             report.notes.push_back("Independent reviewer and behavioral/FFI/consumer checks are agent responsibilities; this CLI does not falsely mark them PASS");
         }
         if(profile.block_heuristic_p2 && report.new_unsuppressed_p2())report.gate("review P2 heuristic",Status::Fail,"strict profile requests review of new P2 patterns");
+        if(opt.fail_on_new_confirmed) {
+            const auto count=std::count_if(report.findings.begin(),report.findings.end(),[](const auto& f) {
+                return !f.existing&&!f.suppressed&&f.confidence=="confirmed"&&f.evidence_level=="confirmed"&&(f.severity=="P0"||f.severity=="P1");
+            });
+            report.gate("new confirmed high-severity findings",count?Status::Fail:Status::Pass,std::to_string(count)+" confirmed P0/P1 regressions; this policy does not upgrade heuristic confidence");
+        }
     }
     if(report.has_failure())return 1;
     if(report.required_unverified()||(opt.strict && report.any_unverified()))return 2;

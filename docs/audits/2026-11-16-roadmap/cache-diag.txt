@@ -1,0 +1,14 @@
+Test project C:/Users/luisv/Desarrollo/cpp-engineering-guardrails-v3-cpp-only/cpp-engineering-guardrails/cmake-build-roadmap
+    Start 9: lint-dependency-cache
+1/1 Test #9: lint-dependency-cache ............***Failed    0.86 sec
+run 11 {"action":"","root":"","profile":"","files_scanned":0,"files_skipped":0,"findings_capped":0,"summary":{"by_rule":{},"hotspots":[]},"gates":[{"name":"clang-tidy","status":"PASS","details":"1/1 units; 1 executed batches; 0 dependency-validated cache hits","required":true}],"findings":[],"metrics":{"code_lines":0,"production_lines":0,"test_lines":0,"per_kloc":null,"by_rule":{}},"baseline_delta":{"loaded":false,"new":0,"known":0,"unobserved":0,"resolved":[],"by_rule":{},"affected_paths":[]},"analyses":{"lint":{"total":1,"analyzed":1,"cached":0,"batches":1,"cache_bypassed":0,"complete":true}},"notes":["clang-tidy runs without --fix. Project-controlled compiler flags and .clang-tidy affect results. Cache entries retain only successful runs."]}
+
+
+
+0% tests passed, 1 tests failed out of 1
+
+Total Test time (real) =   0.86 sec
+
+The following tests FAILED:
+	  9 - lint-dependency-cache (Failed)
+Errors while running CTest

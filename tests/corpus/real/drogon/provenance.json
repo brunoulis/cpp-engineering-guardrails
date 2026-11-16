@@ -1,0 +1,13 @@
+{
+  "repository": "drogonframework/drogon",
+  "revision": "571161281fb14bc583a33d84b527985cb7b084cf",
+  "source": "lib/src/HttpUtils.cc",
+  "source_url": "https://raw.githubusercontent.com/drogonframework/drogon/571161281fb14bc583a33d84b527985cb7b084cf/lib/src/HttpUtils.cc",
+  "excerpt_lines": "1-103",
+  "excerpt_sha256": "70E185D72942E822FE7044A5A654CAE9D0D0FE16A879A80279681AD92D357674",
+  "license_path": "LICENSE",
+  "license_present": true,
+  "license_error": null,
+  "source_sha256": "66FD354C694879D050ED08BE08185674DF9A4A4C1C42AB14A2B4DFCC7A439111",
+  "license_sha256": "7E1ED2CA339C384279F1E195E99916EB0145A0D87659969C7E22F8FDD53E11FD"
+}
