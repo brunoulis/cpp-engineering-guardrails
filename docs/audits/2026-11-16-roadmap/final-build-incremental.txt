@@ -1,0 +1,15 @@
+# Extracto: se omiten únicamente las líneas informativas de /showIncludes.
+[1/14] Building CXX object tools\cpp-rails\CMakeFiles\cpp_rails_core.dir\src\cpp_rails.cpp.obj
+[2/14] Linking CXX static library tools\cpp-rails\cpp_rails_core.lib
+[3/14] Linking CXX executable tools\cpp-rails\cpp-rails-check.exe
+[4/14] Linking CXX executable tools\cpp-rails\cpp-rails-audit.exe
+[5/14] Linking CXX executable tools\cpp-rails\cpp-rails-selftest.exe
+[6/14] Linking CXX executable tools\cpp-rails\cpp-rails-roadmap-tests.exe
+[7/14] Linking CXX executable tools\cpp-rails\cpp-rails-quality-tests.exe
+[8/14] Linking CXX executable tools\cpp-rails\cpp-rails-documentation-tests.exe
+[9/14] Linking CXX executable tools\cpp-rails\cpp-rails-corpus.exe
+[10/14] Linking CXX executable tools\cpp-rails\cpp-rails-architecture-tests.exe
+[11/14] Linking CXX executable tools\cpp-rails\cpp-rails-semantic-tests.exe
+[12/14] Linking CXX executable tools\cpp-rails\cpp-rails-lint-cache-tests.exe
+[13/14] Linking CXX executable tools\cpp-rails\cpp-rails-regressions.exe
+[14/14] Linking CXX executable tools\cpp-rails\cpp-rails-fixtures.exe

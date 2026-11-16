@@ -1,0 +1,19 @@
+Test project C:/Users/luisv/Desarrollo/cpp-engineering-guardrails-v3-cpp-only/cpp-engineering-guardrails/cmake-build-cpp23
+    Start 1: cpp-rails-selftest
+1/7 Test #1: cpp-rails-selftest ...............   Passed    0.15 sec
+    Start 2: cpp-rails-regressions
+2/7 Test #2: cpp-rails-regressions ............   Passed   32.67 sec
+    Start 3: windows-resource-contracts
+3/7 Test #3: windows-resource-contracts .......   Passed    0.02 sec
+    Start 4: compiler-fixtures
+4/7 Test #4: compiler-fixtures ................   Passed    1.62 sec
+    Start 5: safety-contract-examples
+5/7 Test #5: safety-contract-examples .........   Passed    0.01 sec
+    Start 6: cli-audit-smoke
+6/7 Test #6: cli-audit-smoke ..................   Passed    0.01 sec
+    Start 7: contract-snippets
+7/7 Test #7: contract-snippets ................   Passed    0.01 sec
+
+100% tests passed, 0 tests failed out of 7
+
+Total Test time (real) =  34.50 sec

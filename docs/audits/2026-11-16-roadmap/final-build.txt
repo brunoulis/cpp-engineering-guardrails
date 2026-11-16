@@ -1,0 +1,42 @@
+# Extracto: se omiten únicamente las líneas informativas de /showIncludes.
+[1/1] Cleaning all built files...
+Cleaning... 39 files.
+[1/39] Building CXX object tools\cpp-rails\CMakeFiles\cpp_rails_core.dir\src\process.cpp.obj
+[2/39] Building CXX object tools\cpp-rails\CMakeFiles\cpp_rails_core.dir\src\baseline.cpp.obj
+[3/39] Building CXX object tools\cpp-rails\CMakeFiles\cpp_rails_core.dir\src\reporting.cpp.obj
+[4/39] Building CXX object tools\cpp-rails\CMakeFiles\cpp_rails_core.dir\src\quality.cpp.obj
+[5/39] Building CXX object tools\cpp-rails\CMakeFiles\cpp_rails_core.dir\src\cpp_rails.cpp.obj
+[6/39] Building CXX object tools\cpp-rails\CMakeFiles\cpp_rails_core.dir\src\semantic.cpp.obj
+[7/39] Building CXX object tools\cpp-rails\CMakeFiles\cpp_rails_core.dir\src\architecture.cpp.obj
+[8/39] Building CXX object tools\cpp-rails\CMakeFiles\cpp_rails_core.dir\src\lint.cpp.obj
+[9/39] Linking CXX static library tools\cpp-rails\cpp_rails_core.lib
+[10/39] Building CXX object tools\cpp-rails\CMakeFiles\cpp-rails-audit.dir\src\main_audit.cpp.obj
+[11/39] Building CXX object tools\cpp-rails\CMakeFiles\cpp-rails-check.dir\src\main_check.cpp.obj
+[12/39] Building CXX object tools\cpp-rails\CMakeFiles\cpp-rails-roadmap-tests.dir\tests\roadmap_tests.cpp.obj
+[13/39] Building CXX object tools\cpp-rails\CMakeFiles\cpp-rails-documentation-tests.dir\tests\documentation_tests.cpp.obj
+[14/39] Building CXX object tools\cpp-rails\CMakeFiles\cpp-rails-quality-tests.dir\tests\quality_tests.cpp.obj
+[15/39] Building CXX object tools\cpp-rails\CMakeFiles\cpp-rails-selftest.dir\tests\selftest.cpp.obj
+[16/39] Building CXX object tools\cpp-rails\CMakeFiles\cpp-rails-architecture-tests.dir\tests\architecture_tests.cpp.obj
+[17/39] Building CXX object tools\cpp-rails\CMakeFiles\cpp-rails-corpus.dir\tests\corpus_runner.cpp.obj
+[18/39] Building CXX object tools\cpp-rails\CMakeFiles\cpp-rails-lint-cache-tests.dir\tests\lint_cache_tests.cpp.obj
+[19/39] Building CXX object tools\cpp-rails\CMakeFiles\cpp-rails-semantic-tests.dir\tests\semantic_tests.cpp.obj
+[20/39] Building CXX object tools\cpp-rails\CMakeFiles\cpp-rails-windows-resources.dir\tests\windows_resources.cpp.obj
+[21/39] Building CXX object tools\cpp-rails\CMakeFiles\cpp-rails-safety-examples.dir\__\__\tests\fixtures\safety_contracts_positive.cpp.obj
+[22/39] Building CXX object tools\cpp-rails\CMakeFiles\cpp-rails-example.dir\__\__\examples\native-guardrails-snippets.cpp.obj
+[23/39] Linking CXX executable tools\cpp-rails\cpp-rails-audit.exe
+[24/39] Linking CXX executable tools\cpp-rails\cpp-rails-check.exe
+[25/39] Linking CXX executable tools\cpp-rails\cpp-rails-selftest.exe
+[26/39] Linking CXX executable tools\cpp-rails\cpp-rails-roadmap-tests.exe
+[27/39] Building CXX object tools\cpp-rails\CMakeFiles\cpp-rails-regressions.dir\tests\regressions.cpp.obj
+[28/39] Linking CXX executable tools\cpp-rails\cpp-rails-documentation-tests.exe
+[29/39] Linking CXX executable tools\cpp-rails\cpp-rails-quality-tests.exe
+[30/39] Linking CXX executable tools\cpp-rails\cpp-rails-corpus.exe
+[31/39] Linking CXX executable tools\cpp-rails\cpp-rails-architecture-tests.exe
+[32/39] Linking CXX executable tools\cpp-rails\cpp-rails-semantic-tests.exe
+[33/39] Linking CXX executable tools\cpp-rails\cpp-rails-lint-cache-tests.exe
+[34/39] Linking CXX executable tools\cpp-rails\cpp-rails-windows-resources.exe
+[35/39] Linking CXX executable tools\cpp-rails\cpp-rails-regressions.exe
+[36/39] Linking CXX executable tools\cpp-rails\cpp-rails-safety-examples.exe
+[37/39] Linking CXX executable tools\cpp-rails\cpp-rails-example.exe
+[38/39] Building CXX object tools\cpp-rails\CMakeFiles\cpp-rails-fixtures.dir\tests\fixture_runner.cpp.obj
+[39/39] Linking CXX executable tools\cpp-rails\cpp-rails-fixtures.exe

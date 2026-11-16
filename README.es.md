@@ -1,8 +1,8 @@
-# C++ Engineering Guardrails v1.3.0
+# C++ Engineering Guardrails v1.4.0
 
 > English: [README.md](README.md)
 
-## Safety Intelligence (skill v1.3.0)
+## Safety Intelligence (skill v1.4.0)
 
 La skill incorpora un [flujo de análisis de seguridad](references/safety-intelligence.md),
 [contratos y efectos de funciones](references/function-contracts.md), revisión de
@@ -11,12 +11,16 @@ La skill incorpora un [flujo de análisis de seguridad](references/safety-intell
 identidad de binarios y contratos, las evidencias por propiedad, los efectos
 desconocidos, las excepciones y la pérdida de cobertura.
 
-Se conservan las 14 reglas y los cuatro modos; las herramientas usan C++23. Esta
-actualización añade instrucciones y ejemplos verificables; los comandos
-`safety ...`, `--safety-profile` y el análisis AST siguen pendientes de
-implementación. Clang/LLVM, Fil-C y scpptool son opciones de evaluación, no
-dependencias obligatorias. Pasar comprobaciones no certifica que un proyecto sea
-seguro en memoria.
+Se conservan las 14 reglas, los cuatro modos y C++23. La v1.4 añade `audit --score`,
+AST real opcional con `--semantic`, `safety map|contracts|boundaries|regressions`,
+targets CMake con `topology --targets`, reglas explícitas con `--rules` y planes
+estructurados con `plan`. Los baselines distinguen nuevos, conocidos,
+desaparecidos en el ámbito observado y no observados. Lint admite lotes,
+presupuestos y caché opcional con invalidación por dependencias del compilador.
+`--safety-profile` sigue sin implementarse. Pasar comprobaciones no certifica
+seguridad de memoria. Véanse los [límites reales](tools/cpp-rails/README.md), el
+[corpus etiquetado](tests/corpus/README.md) y [VERSION](VERSION), fuente única de
+versión para CMake y los metadatos del CLI, contrastada con documentación en CTest.
 
 **Skill instalable para Codex, Claude Code y Hermes**. Orienta a agentes para **generar, auditar, refactorizar y migrar C++** con seguridad, simplicidad, pruebas reales y decisiones justificadas. Integra aprendizajes de `rust-engineering-guardrails` y `flutter-engineering-guardrails`, adaptados a las particularidades de C++.
 

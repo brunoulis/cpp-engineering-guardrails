@@ -1,4 +1,4 @@
-# C++ Engineering Guardrails v1.3.0
+# C++ Engineering Guardrails v1.4.0
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![C++23](https://img.shields.io/badge/tools-C%2B%2B23-blue.svg)
@@ -41,7 +41,7 @@ that are discovered, never assumed.
 
 Combine a mode with a profile, e.g. *"audit with the `native-ui` profile"*. Example prompts live in [`examples/AGENT_PROMPTS.md`](examples/AGENT_PROMPTS.md).
 
-## Safety Intelligence (skill v1.3.0)
+## Safety Intelligence (skill v1.4.0)
 
 Use the [safety workflow](references/safety-intelligence.md) to map resources and
 boundaries, review [function effects](references/function-contracts.md), inspect
@@ -50,10 +50,27 @@ boundaries, review [function effects](references/function-contracts.md), inspect
 binary/contract identities and evidence for lifetime, invalidation, initialization,
 bounds and thread safety, including unknowns, exceptions and lost coverage.
 
-This is agent guidance with C++17 examples, preserving all 14 rails and four
-modes. It does not add semantic analysis or new `safety` CLI commands. Optional
-Clang/LLVM, Fil-C and scpptool work is explicitly separated from implemented
-capabilities. Passing tools is not a whole-project memory-safety guarantee.
+All 14 rails and four modes remain. v1.4 adds optional compiler-backed
+`safety map|contracts|boundaries|regressions`, using Clang ASTs and actual compile
+commands for bounded local lifetime/release/invalidation evidence. Opaque effects
+and unsupported scope remain unknown. Passing tools is not a whole-project
+memory-safety guarantee. See [the CLI guide](tools/cpp-rails/README.md).
+
+## Auditor v1.4
+
+- `audit --score`: six independent quality indicators with evidence and rates.
+- `audit --semantic`: optional real Clang AST; no mandatory LLVM library dependency.
+- `topology --targets`: existing CMake File API target graph, with a labeled heuristic fallback.
+- `--rules PATH`: explicit dependency/API constraints and reviewed exceptions.
+- Baselines: new/known/disappeared/unobserved, rule deltas and code-line rates.
+- `plan`: structured contract, cause, minimal/structural/leave-as-is alternatives and verification.
+- Lint: deterministic batches, configurable budgets and opt-in dependency-aware caching.
+- Native labeled precision corpus, version consistency checks and compiler/backend CI.
+
+[`VERSION`](VERSION) is the build version source; CTest checks documentation and
+SARIF metadata for drift. See [quality evidence](docs/quality.md),
+[target/rule boundaries](tools/cpp-rails/ARCHITECTURE.md) and
+[semantic coverage](tools/cpp-rails/SEMANTIC_BACKEND.md).
 
 ## Install the skill
 
@@ -151,7 +168,13 @@ Flutter-specific concepts (widgets, Provider) are not transplanted into C++ libr
 
 ## Limitations
 
-The CLI does not reimplement the Clang AST, perform full semantic or data-flow analysis, look up GCC/LLVM regressions online, or promise support for every non-CMake build. `std::regex` and the lightweight lexer only surface **hints** for an agent to review; lifetime, race and template-semantics risks need compilers, sanitizers, tests and engineering judgment. The median/MAD benchmark check is a prioritization heuristic, not statistical inference.
+The default scanner and quality indicators are lexical hints. Optional Clang
+AST analysis covers selected local patterns using actual types; it does not
+implement full interprocedural data flow, prove race/UB freedom, research compiler
+regressions online or support every build configuration. Unknown dependencies,
+opaque effects, unsupported flags and exhausted analysis budgets remain
+UNVERIFIED. The median/MAD benchmark check is a prioritization heuristic, not
+statistical inference.
 
 ### Profiles in the CLI
 

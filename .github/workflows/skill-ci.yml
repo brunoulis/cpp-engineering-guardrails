@@ -16,11 +16,22 @@ jobs:
       - name: Configure C++23 tools and explicit C++17/C++20 fixtures
         env:
           CXX: ${{ matrix.cxx }}
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=23 -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=23 -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCPP_RAILS_REQUIRE_CLANG_TESTS=ON
       - name: Build native CLI and fixtures
         run: cmake --build build --parallel 2
       - name: Run CTest (includes negative compiler fixture)
         run: ctest --test-dir build --output-on-failure
+      - name: Save labeled precision and self-audit evidence
+        run: |
+          build/tools/cpp-rails/cpp-rails-corpus tests/corpus corpus-results.json
+          build/tools/cpp-rails/cpp-rails-audit audit --root tools/cpp-rails --score --format json --output self-audit.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cpp-evidence-${{ matrix.cxx }}
+          path: |
+            corpus-results.json
+            tools/cpp-rails/self-audit.json
+            build/Testing/Temporary/LastTest.log
   macos-clang:
     runs-on: macos-latest
     steps:

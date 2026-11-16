@@ -1,0 +1,35 @@
+Test project C:/Users/luisv/Desarrollo/cpp-engineering-guardrails-v3-cpp-only/cpp-engineering-guardrails/cmake-build-roadmap
+      Start  1: cpp-rails-selftest
+ 1/15 Test  #1: cpp-rails-selftest ...............   Passed    0.21 sec
+      Start  2: roadmap-regressions
+ 2/15 Test  #2: roadmap-regressions ..............   Passed    0.28 sec
+      Start  3: documentation-consistency
+ 3/15 Test  #3: documentation-consistency ........   Passed    0.03 sec
+      Start  4: cpp-rails-quality
+ 4/15 Test  #4: cpp-rails-quality ................   Passed    0.12 sec
+      Start  5: corpus-metrics-selftest
+ 5/15 Test  #5: corpus-metrics-selftest ..........   Passed    0.02 sec
+      Start  6: labeled-precision-corpus
+ 6/15 Test  #6: labeled-precision-corpus .........   Passed    0.04 sec
+      Start  7: cpp-rails-architecture
+ 7/15 Test  #7: cpp-rails-architecture ...........   Passed    3.62 sec
+      Start  8: cpp-rails-semantic
+ 8/15 Test  #8: cpp-rails-semantic ...............   Passed   27.72 sec
+      Start  9: lint-dependency-cache
+ 9/15 Test  #9: lint-dependency-cache ............   Passed    1.35 sec
+      Start 10: cpp-rails-regressions
+10/15 Test #10: cpp-rails-regressions ............   Passed   56.62 sec
+      Start 11: windows-resource-contracts
+11/15 Test #11: windows-resource-contracts .......   Passed    0.04 sec
+      Start 12: compiler-fixtures
+12/15 Test #12: compiler-fixtures ................   Passed    2.45 sec
+      Start 13: safety-contract-examples
+13/15 Test #13: safety-contract-examples .........   Passed    0.01 sec
+      Start 14: cli-audit-smoke
+14/15 Test #14: cli-audit-smoke ..................   Passed    0.02 sec
+      Start 15: contract-snippets
+15/15 Test #15: contract-snippets ................   Passed    0.01 sec
+
+100% tests passed, 0 tests failed out of 15
+
+Total Test time (real) =  92.59 sec

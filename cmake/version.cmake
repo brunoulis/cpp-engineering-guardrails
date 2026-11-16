@@ -1,0 +1,4 @@
+file(STRINGS "${CMAKE_CURRENT_LIST_DIR}/../VERSION" CPP_RAILS_VERSION LIMIT_COUNT 1)
+if(NOT CPP_RAILS_VERSION MATCHES "^[0-9]+\\.[0-9]+\\.[0-9]+$")
+  message(FATAL_ERROR "Invalid cpp-rails VERSION")
+endif()

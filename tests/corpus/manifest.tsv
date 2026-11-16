@@ -1,0 +1,36 @@
+case_id	detector	rule	path	label	profile	provenance	rationale
+backend-owner	lexical	CPP-RAW-ALLOC	synthetic/backend/manual_owner.cpp	positive	general	synthetic	Manual allocation across a potentially throwing call warrants ownership review
+literal-new	lexical	CPP-RAW-ALLOC	synthetic/backend/literal_noise.cpp	negative	general	synthetic	Allocation-like diagnostic literal contents and comments are not allocations
+literal-shell	lexical	CPP-SHELL-CALL	synthetic/backend/literal_noise.cpp	negative	general	synthetic	Shell-like diagnostic literal contents and comments are not execution
+literal-string	lexical	CPP-UNBOUNDED-STRING	synthetic/backend/literal_noise.cpp	negative	general	synthetic	String-copy-like literal contents are diagnostic data
+backend-copy	lexical	CPP-UNBOUNDED-STRING	synthetic/backend/unbounded_copy.cpp	positive	general	synthetic	A fixed four-byte buffer receiving arbitrary input merits bounds review
+backend-shell	lexical	CPP-SHELL-CALL	synthetic/backend/shell.cpp	positive	general	synthetic	Caller-controlled shell command needs injection-boundary review
+qt-parent	lexical	CPP-RAW-ALLOC	synthetic/qt/parent_owned.cpp	negative	native-ui	synthetic	QObject parent ownership is a valid negative for generic manual-allocation warning
+qt-context	lexical	CPP-UI-CONNECT-NO-CONTEXT	synthetic/qt/parent_owned.cpp	negative	native-ui	synthetic	Receiver context tracks object lifetime
+qt-contextless	lexical	CPP-UI-CONNECT-NO-CONTEXT	synthetic/qt/contextless.cpp	positive	native-ui	synthetic	Contextless callback capturing this needs lifetime review
+engine-joined	lexical	CPP-DETACHED-THREAD	synthetic/engine/scoped_worker.cpp	negative	general	synthetic	Jthread scoped ownership does not detach
+engine-detached	lexical	CPP-DETACHED-THREAD	synthetic/engine/detached_worker.cpp	positive	general	synthetic	Detached task borrowing state needs shutdown and lifetime review
+template-valid	lexical	CPP-INSERT-CONCEPT	synthetic/template-library/constraint.cpp	negative	general	synthetic	Same-type arithmetic constraint has no adapter insertion-body mismatch
+template-adapter	lexical	CPP-INSERT-CONCEPT	synthetic/template-library/adapter_constraint.cpp	positive	general	synthetic	Requires-expression constructs an inserter without checking the insertion operation and needs concrete instantiation review
+facade-valid	lexical	CPP-RAW-ALLOC	synthetic/template-library/facade.hpp	negative	general	synthetic	Opaque borrowed pointer declaration alone is not allocation
+benchmark-alloc	lexical	CPP-RAW-ALLOC	real/google-benchmark/statistics_excerpt.cc	negative	general	google/benchmark@cf4d7fedd59473f99042806fcba407ea767c5327	Pinned statistical functions use automatic values and containers without manual allocation
+benchmark-shell	lexical	CPP-SHELL-CALL	real/google-benchmark/statistics_excerpt.cc	negative	general	google/benchmark@cf4d7fedd59473f99042806fcba407ea767c5327	Pinned numerical code does not execute a shell
+duplicate-positive	quality	duplication	synthetic/quality/duplicate_b.cpp	positive	general	synthetic	Accidental six-line exact repeated computation merits duplication review
+duplicate-contract	quality	duplication	synthetic/quality/required_abi_b.cpp	negative	general	synthetic	Independent versioned ABI implementation is required by fixture contract; extraction warning is a false positive
+duplicate-small	quality	duplication	synthetic/quality/short_clone.cpp	positive	general	synthetic	Accidental compressed repeated computation is still a duplicate despite lexical window threshold
+duplicate-simple	quality	duplication	synthetic/quality/simple.cpp	negative	general	synthetic	One simple computation is not duplicated
+complex-positive	quality	complexity	synthetic/quality/complex.cpp	positive	general	synthetic	Ten independent decisions merit control-flow review
+complex-trailing	quality	complexity	synthetic/quality/trailing_return.cpp	positive	general	synthetic	Ten decisions remain complex with a trailing return type; unsupported lexical shape is a false negative
+complex-data	quality	complexity	synthetic/quality/nested_data.cpp	negative	general	synthetic	Nested aggregate initialization does not create control-flow complexity
+complex-simple	quality	complexity	synthetic/quality/simple.cpp	negative	general	synthetic	Straight-line addition has no complex control flow
+benchmark-complex	quality	complexity	real/google-benchmark/statistics_excerpt.cc	negative	general	google/benchmark@cf4d7fedd59473f99042806fcba407ea767c5327	Small statistical functions have few shallow branches and no large control-flow region
+fmt-alloc	lexical	CPP-RAW-ALLOC	real/fmt/format.h	negative	general	fmtlib/fmt@0e72a3ecec32d46ea012914ea04856bdd343403a	Pinned type traits and floating-point bit helpers use no manual allocation
+fmt-concept	lexical	CPP-INSERT-CONCEPT	real/fmt/format.h	negative	general	fmtlib/fmt@0e72a3ecec32d46ea012914ea04856bdd343403a	Type traits and arithmetic helpers have no insert-adapter constraint mismatch
+fmt-complex	quality	complexity	real/fmt/format.h	negative	general	fmtlib/fmt@0e72a3ecec32d46ea012914ea04856bdd343403a	Small bit helper bodies have few shallow actual control-flow decisions despite conditional compiler paths
+qt-alloc	lexical	CPP-RAW-ALLOC	real/qtbase/qversionnumber.cpp	negative	native-ui	qt/qtbase@f6a1e0449f6645d814bfb076df68c6e6dbb87457	Pinned version-value normalization and comparison do not allocate with new
+qt-complex	quality	complexity	real/qtbase/qversionnumber.cpp	positive	general	qt/qtbase@f6a1e0449f6645d814bfb076df68c6e6dbb87457	Version comparison has distinct inline-storage and pointer-storage loops plus trailing-segment decisions; review-worthy branch surface
+godot-alloc	lexical	CPP-RAW-ALLOC	real/godot/aabb.cpp	negative	general	godotengine/godot@53166eb0eb0457457d0e41836ac99a2dc9e18996	Pinned bounding-box value calculations use automatic values without new
+godot-complex	quality	complexity	real/godot/aabb.cpp	positive	general	godotengine/godot@53166eb0eb0457457d0e41836ac99a2dc9e18996	Ray intersection and axis clipping contain repeated geometric decisions and nested exceptional-axis paths; complexity merits review without implying a defect
+drogon-alloc	lexical	CPP-RAW-ALLOC	real/drogon/HttpUtils.cc	negative	general	drogonframework/drogon@571161281fb14bc583a33d84b527985cb7b084cf	Pinned HTTP token iterators use views and values without manual allocation
+drogon-shell	lexical	CPP-SHELL-CALL	real/drogon/HttpUtils.cc	negative	general	drogonframework/drogon@571161281fb14bc583a33d84b527985cb7b084cf	Header token iteration and trimming do not execute shell commands
+drogon-complex	quality	complexity	real/drogon/HttpUtils.cc	negative	general	drogonframework/drogon@571161281fb14bc583a33d84b527985cb7b084cf	Bounded iterator bodies have one shallow quote-aware loop and a few returns rather than highly nested control flow

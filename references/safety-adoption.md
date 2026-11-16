@@ -55,9 +55,14 @@ results and measured tradeoffs. Failures are findings to investigate, not licens
 to rewrite the project or weaken its tests. Do not install or migrate merely to
 make a report look more complete.
 
-## Native-tool roadmap — not implemented
+## Native-tool coverage and remaining roadmap
 
-Extend the existing C++ executables if engine work is separately undertaken:
+v1.4 implements optional Clang AST subprocess analysis with actual compile
+commands and bounded intraprocedural contracts. See
+[semantic coverage](../tools/cpp-rails/SEMANTIC_BACKEND.md). The `safety map`, `contracts`,
+`boundaries` and `regressions` views expose the same conservative analysis;
+`regressions` also requires a reviewed baseline. Unknown effects and unsupported
+scope stay unknown. Remaining work includes:
 
 - P0: explicit, revision-bound resource-effect summaries and property evidence;
   unknown/conflicting contracts must propagate rather than silently becoming safe.
@@ -67,8 +72,8 @@ Extend the existing C++ executables if engine work is separately undertaken:
   language/toolchain requirements separately; newer LLVM may require newer C++.
 - P2: guided migrations and optional Fil-C/scpptool compatibility experiments.
 
-`cpp-rails-audit safety map|contracts|boundaries|regressions` and
-`cpp-rails-check --safety-profile strict` are proposed interfaces only. There is
-no `[safety]` configuration parser, semantic ownership inventory, cross-TU summary
-verifier or LLVM component in the current tools. Do not run or advertise these
-interfaces as available; consult [the CLI README](../tools/cpp-rails/README.md).
+`cpp-rails-check --safety-profile strict` remains proposed. There is no `[safety]`
+configuration parser, general cross-TU summary verifier or linked LibTooling
+component. The optional backend invokes Clang and consumes its AST; no LLVM
+development-library dependency is required. Consult the
+[CLI README](../tools/cpp-rails/README.md) before selecting interfaces.
