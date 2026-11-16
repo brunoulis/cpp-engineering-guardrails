@@ -48,6 +48,31 @@ int main(int argc, char** argv) try {
     require(!passed(unavailable) && unavailable.required_unverified(), "missing compiler must be explicitly UNVERIFIED");
     if (argc < 2) { std::cout << "PASS unavailable backend/database; UNVERIFIED real Clang tests: pass clang++ path as argv[1]\n"; return 0; }
     options.clang_executable = argv[1];
+    // Model libc++'s conversion-to-alias AST spelling independently of the host
+    // standard library. This is a protocol fixture, not a replacement STL.
+    put(source, R"cpp(
+namespace std { inline namespace __1 {
+template<class C> struct basic_string_view { const C* pointer; };
+template<class C> struct basic_string {
+    using __self_view = basic_string_view<C>;
+    C bytes[1]{};
+    operator __self_view() const { return {bytes}; }
+};
+using string = basic_string<char>;
+using string_view = basic_string_view<char>;
+} }
+#define RETURN_ALIAS(value) return value
+std::string_view bad_alias() { std::string text; RETURN_ALIAS(text); }
+std::string_view good_alias_parameter(const std::string& text) { return text; }
+std::string_view good_alias_static() { static std::string text; return text; }
+)cpp");
+    Report alias_conversion;
+    analyze_semantic(options, temp.path, {source}, alias_conversion);
+    require(passed(alias_conversion), "conversion alias AST must be covered");
+    require(std::ranges::count_if(alias_conversion.findings, [](const auto& finding) {
+        return finding.rule == "SEM-DANGLING-VIEW" && finding.evidence.find("bad_alias") != std::string::npos;
+    }) == 1, "canonical return type must recognize libc++ conversion aliases");
+    require(alias_conversion.findings.size() == 1, "borrowed/static alias conversions must stay negative");
     const std::string source_text = R"cpp(
 #include <string>
 #include <string_view>
@@ -101,7 +126,11 @@ void good_throw() { auto* pointer = new int; delete pointer; throw 0; delete poi
         require(finding.line > 0, "AST offset must resolve source line");
     }
     auto count = std::ranges::count_if(analyzed.findings, [](const auto& f) { return f.rule == "SEM-DANGLING-VIEW"; });
-    if (count != 2) for (const auto& finding : analyzed.findings) std::cerr << finding.rule << " " << finding.evidence << '\n';
+    if (count != 2) {
+        for (const auto& finding : analyzed.findings) std::cerr << finding.rule << " " << finding.evidence << '\n';
+        std::cerr << exec({options.clang_executable, "--version"}, temp.path).output;
+        std::cerr << exec({options.clang_executable, "-std=c++23", "-fsyntax-only", "-Xclang", "-ast-dump", "-Xclang", "-ast-dump-filter=bad_string", utf8_bytes(source.u8string())}, temp.path).output;
+    }
     require(count == 2, "exactly two dangling views including macro expansion");
     put(source, "\n\n" + source_text);
     Report shifted;
