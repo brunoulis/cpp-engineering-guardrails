@@ -22,3 +22,9 @@
 5. Fuzz parser/serialization/FFI inputs with corpus and sanitizers when justified.
 
 **Limit:** passing sanitizers does not prove absence of UB. Do not ship performance benchmarks from an ASan build as representative production speed.
+
+For a property-level safety audit, use [safety-intelligence.md](safety-intelligence.md).
+For borrows across opaque calls use [function-contracts.md](function-contracts.md);
+for partial output and storage transitions use
+[initialization-invalidation.md](initialization-invalidation.md). This file remains
+the canonical source for the lifetime rules.

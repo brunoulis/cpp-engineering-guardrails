@@ -11,3 +11,10 @@
 7. **Independent review:** ensure no hidden contract changes, no races, no changed tests that mask failures, and documentation remains accurate.
 
 Not a license for wholesale class splitting, newer-standard upgrades, `module` adoption or micro-optimizations. Each must have a reason.
+
+For safety-driven migrations use `references/safety-adoption.md`: migrate one
+unsafe boundary per checkpoint, keep revision-bound function contracts and compare
+property evidence with `templates/safety-evidence.md`. New unknown calls, stale
+summaries, lost coverage and exceptions are regressions to review even when no
+new sanitizer diagnostic appears. LLVM, Fil-C and scpptool remain optional;
+neither changing toolchains nor mimicking Rust supplies a universal borrow checker.

@@ -12,6 +12,7 @@
 - [ ] Build and targeted tests actually ran; sanitizers/compiler matrix included if needed.
 - [ ] Performance claims include baseline, representative workload, repeated results and noise.
 - [ ] Findings separate confirmed vs likely vs suspected with P0–P3 evidence.
+- [ ] If safety is in scope, call effects match current implementations/binaries; missing or stale contracts remain unknown, and property evidence records uncovered paths and exceptions without converting them to PASS.
 - [ ] I captured unresolved unknowns/UNVERIFIED gates and rollback options.
 
 **Verdict:** approve / block / request targeted follow-up, with reasons.

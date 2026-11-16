@@ -18,6 +18,13 @@ Alternatives, tradeoffs, scope boundaries, API/ABI changes (intended or none), r
 | Gate | Command/configuration | Result (PASS/FAIL/UNVERIFIED/N/A) | Evidence |
 |---|---|---|---|
 
+## Safety evidence (when in scope)
+Attach [safety-evidence.md](safety-evidence.md) and relevant
+[function-contract.md](function-contract.md) entries. Report each scoped property,
+check result, assumptions, binary/summary freshness and uncovered paths. Include
+unknown effects, accepted exceptions and lost evidence versus baseline; passing
+tools alone do not establish component memory safety.
+
 ## Performance (when claimed)
 Dataset, machine, compiler/flags, baseline vs candidate median/p95/p99, repeats, spread/noise, confidence and tradeoffs.
 

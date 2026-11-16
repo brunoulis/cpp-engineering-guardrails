@@ -19,6 +19,12 @@
 ## Contracts and scope
 Behavior, serialization, errors, ordering, resource lifetime, concurrency, exception guarantees, API/ABI, supported platforms, generated/vendor exclusions.
 
+For safety-driven changes: boundary/resource map, current and intended function
+effects (including unknowns), initialized ranges, affected borrows and the
+property evidence to preserve. Use [function-contract.md](function-contract.md)
+and [safety-evidence.md](safety-evidence.md); define how changed identities expire
+summaries and how copying/reacquiring can affect observable results.
+
 ## Checkpoints and rollback
 1. Add characterization/negative tests, ensure current behavior is understood.
 2. Mechanical extraction (no behavior change), compile/test.
