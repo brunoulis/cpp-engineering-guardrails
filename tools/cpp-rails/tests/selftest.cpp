@@ -18,6 +18,12 @@ int main(int argc,char** argv){
     REQUIRE(status_text(Status::Unverified)=="UNVERIFIED");
     REQUIRE(make_id("R","path.cpp","code",1)==make_id("R","path.cpp","code",1));
     REQUIRE(make_id("R","path.cpp","code",1)!=make_id("R","path.cpp","code",2));
+    // Preserve UTF-8 bytes (including embedded NUL) across char8_t boundaries.
+    REQUIRE(utf8_bytes(u8"").empty());
+    REQUIRE(utf8_bytes(u8"ni\u00f1o \U0001f697.cpp")=="ni\xc3\xb1o \xf0\x9f\x9a\x97.cpp");
+    REQUIRE(utf8_bytes(std::u8string_view(u8"a\0b",3))==std::string("a\0b",3));
+    const auto utf8_path=path_from_utf8("ni\xc3\xb1o \xf0\x9f\x9a\x97.cpp");
+    REQUIRE(utf8_bytes(utf8_path.u8string())=="ni\xc3\xb1o \xf0\x9f\x9a\x97.cpp");
     REQUIRE(parse_options(false,{"audit","--profile","general"}).action=="audit");
     REQUIRE(parse_options(true,{"--format","json"}).check_program);
     REQUIRE(parse_options(false,{"templates","--expect-error","insert"}).expect_error=="insert");
@@ -31,6 +37,16 @@ int main(int argc,char** argv){
     REQUIRE(json(r).find("UNVERIFIED")!=std::string::npos);
     auto temp=std::filesystem::temp_directory_path()/("cpp-rails-fixture-"+std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
     std::filesystem::create_directories(temp);
+    const auto unicode_file=temp/std::filesystem::path(u8"ni\u00f1o \U0001f697.cpp");
+    { std::ofstream(unicode_file)<<"void f(){auto p=new int;delete p;}\n"; }
+    const auto unicode_scan=scan(temp);
+    REQUIRE(unicode_scan.findings.size()==1);
+    REQUIRE(unicode_scan.findings[0].path=="ni\xc3\xb1o \xf0\x9f\x9a\x97.cpp");
+    Report unicode_report;unicode_report.root=utf8_bytes(temp.u8string());
+    unicode_report.findings=unicode_scan.findings;
+    REQUIRE(json(unicode_report).find("ni\xc3\xb1o \xf0\x9f\x9a\x97.cpp")!=std::string::npos);
+    REQUIRE(sarif(unicode_report).find("ni%C3%B1o%20%F0%9F%9A%97.cpp")!=std::string::npos);
+    std::filesystem::remove(unicode_file);
     auto testsource=temp/"demo.cpp";
     {
         std::ofstream out(testsource);

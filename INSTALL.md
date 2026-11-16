@@ -44,7 +44,12 @@ A successful file copy or CLI listing proves placement, not that a running host 
 
 ## Optional tool preparation
 
-The instructions need no compiler. The optional auditor needs CMake and a C++17 compiler; its fixtures also use C++20. From the installed skill folder:
+The instructions need no compiler. Building the optional tools requires CMake
+3.20+ and a compiler/STL that can build them in C++23 mode. Explicit C++17 safety
+and C++20 concept fixtures test lower-standard target code. Upgrading the tool
+does not upgrade the projects it audits. See
+[standard/toolchain notes](references/language-standard-upgrades.md).
+From the installed skill folder:
 
 ```sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release

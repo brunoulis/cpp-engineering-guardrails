@@ -5,10 +5,15 @@
 #include <optional>
 #include <set>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace cpprails {
 namespace fs = std::filesystem;
+
+// Preserve UTF-8 code units at the std::string process/report boundary.
+std::string utf8_bytes(std::u8string_view text);
+fs::path path_from_utf8(std::string_view text);
 
 enum class Status { Pass, Fail, Unverified, NotApplicable };
 struct Gate {

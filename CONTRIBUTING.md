@@ -1,6 +1,14 @@
 # Contributing — validate new rules rather than accumulate opinions
 
-This skill is C++-only in its distributed tools. Contributions to CLI scanners, fixture runners and verifiers **must be implemented in C++** (C++17 engine; C++20 only for intentionally modern fixture examples). CMake/CTest and compiler tools are allowed infrastructure. Do not reintroduce Rust, Python or custom Bash audit/test scripts.
+This skill is C++-only in its distributed tools. Contributions to CLI scanners,
+fixture runners and verifiers **must be implemented in C++**, with C++23 as the
+tool baseline and CMake 3.20+ as build infrastructure. Explicit lower-standard
+fixtures remain valid: C++17 safety examples and C++20 concepts test compatibility
+of analyzed code, not the tool's own minimum. CMake/CTest and compiler tools are
+allowed infrastructure. Do not reintroduce Rust, Python or custom Bash audit/test
+scripts. Check the selected compiler/STL before using a new C++23 facility; a
+standard mode does not imply full library conformance. See
+[language-standard-upgrades.md](references/language-standard-upgrades.md).
 
 ## New guardrail review
 1. Reproduce a real problem or documented review risk with a minimal C++ source/test and note compiler/platform/standard.

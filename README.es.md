@@ -1,10 +1,31 @@
-# C++ Engineering Guardrails v3
+# C++ Engineering Guardrails v1.3.0
 
 > English: [README.md](README.md)
 
+## Safety Intelligence (skill v1.3.0)
+
+La skill incorpora un [flujo de análisis de seguridad](references/safety-intelligence.md),
+[contratos y efectos de funciones](references/function-contracts.md), revisión de
+[inicialización e invalidación](references/initialization-invalidation.md) y
+[adopción gradual](references/safety-adoption.md). Las plantillas registran la
+identidad de binarios y contratos, las evidencias por propiedad, los efectos
+desconocidos, las excepciones y la pérdida de cobertura.
+
+Se conservan las 14 reglas y los cuatro modos; las herramientas usan C++23. Esta
+actualización añade instrucciones y ejemplos verificables; los comandos
+`safety ...`, `--safety-profile` y el análisis AST siguen pendientes de
+implementación. Clang/LLVM, Fil-C y scpptool son opciones de evaluación, no
+dependencias obligatorias. Pasar comprobaciones no certifica que un proyecto sea
+seguro en memoria.
+
 **Skill instalable para Codex, Claude Code y Hermes**. Orienta a agentes para **generar, auditar, refactorizar y migrar C++** con seguridad, simplicidad, pruebas reales y decisiones justificadas. Integra aprendizajes de `rust-engineering-guardrails` y `flutter-engineering-guardrails`, adaptados a las particularidades de C++.
 
-**Requisito cumplido:** las herramientas propias (`cpp-rails-audit`, `cpp-rails-check` y sus pruebas) están desarrolladas **exclusivamente en C++17**. No se distribuyen herramientas Rust/Python, Cargo, `pip` ni scripts de auditoría en otro lenguaje. CMake/CTest son infraestructura de compilación/pruebas del ecosistema C++ y Clang/GCC/MSVC, sanitizers y `abidiff` son herramientas externas opcionales.
+**Herramientas propias en C++:** `cpp-rails-audit`, `cpp-rails-check` y sus runners
+se compilan en modo **C++23**. Los fixtures explícitos C++17/C++20 siguen
+comprobando código analizado de estándares anteriores. No se distribuyen
+herramientas Rust/Python, Cargo, `pip` ni scripts de auditoría en otro lenguaje.
+CMake/CTest son infraestructura de compilación/pruebas y Clang/GCC/MSVC,
+sanitizers y `abidiff` son herramientas externas opcionales.
 
 ## Qué contiene
 
@@ -13,13 +34,19 @@
 - `references/`: memoria/lifetime/UB, dominio y tipos, estado/recursos, cancelación/backpressure, concurrencia, templates/concepts, seguridad, compatibilidad ABI/FFI, determinismo, tests, arquitectura adaptable, datos/layout, optimización y revisores.
 - `profiles/`: general, low-latency, library-sdk, legacy-code, engine, service, native-ui, ffi y prototype; la selección es contextual, no obliga a optimizar todo el código.
 - `policies/`: severidades P0–P3, gates según el cambio y excepciones con caducidad.
-- `tools/cpp-rails/`: biblioteca y ejecutables C++17 con escaneo heurístico, baseline, triage, include-topology, informes JSON/Markdown, ejecución de CMake/CTest, `clang-tidy`, sanitizers, matrices de compiladores, comprobación de instanciaciones y benchmarks CSV/TSV.
-- `tests/`: fixtures C++20 positivos/negativos y CTest, sin runners Rust/Python/Bash.
+- `tools/cpp-rails/`: biblioteca y ejecutables C++23 con escaneo heurístico, baseline, triage, include-topology, informes JSON/Markdown, ejecución de CMake/CTest, `clang-tidy`, sanitizers, matrices de compiladores, comprobación de instanciaciones y benchmarks CSV/TSV.
+- `tests/`: ejemplos de seguridad C++17 y fixtures de conceptos C++20 positivos/negativos con CTest, sin runners Rust/Python/Bash.
 - `templates/` y `examples/`: prompts, perfil revisable, planes de refactor, ADR, reporte, protocolo de revisión y contrato FFI.
 
-## Compilar las herramientas (C++17)
+## Compilar las herramientas (C++23)
 
-Requisitos: compilador C++17 y CMake 3.16+. Las pruebas de conceptos usan un compilador con C++20. Comandos desde la carpeta descomprimida:
+Requisitos: CMake 3.20+ y compilador/biblioteca estándar capaces de compilar las
+herramientas en modo C++23. El nuevo mínimo no modifica el estándar de los
+proyectos auditados ni implica conformidad completa con C++23. La validación
+local usa MSVC 19.51.36260.0 y CMake 4.3, que selecciona `/std:c++latest` para
+C++23. C++26 sigue siendo una opción de desarrollo dependiente del compilador;
+véanse las [notas de actualización](references/language-standard-upgrades.md).
+Comandos desde la carpeta descomprimida:
 
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON

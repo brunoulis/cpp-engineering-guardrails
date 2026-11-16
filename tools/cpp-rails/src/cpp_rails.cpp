@@ -41,6 +41,13 @@
 #endif
 
 namespace cpprails {
+std::string utf8_bytes(std::u8string_view text) {
+    return {text.begin(),text.end()};
+}
+fs::path path_from_utf8(std::string_view text) {
+    return fs::path(std::u8string(text.begin(),text.end()));
+}
+
 namespace {
 std::string trim(std::string text) {
     auto a = text.find_first_not_of(" \t\r\n");
@@ -59,16 +66,16 @@ std::string lower(std::string v) {
 }
 std::string read_file(const fs::path& path) {
     std::ifstream in(path, std::ios::binary);
-    if (!in) throw std::runtime_error("cannot read " + path.u8string());
+    if (!in) throw std::runtime_error("cannot read " + utf8_bytes(path.u8string()));
     return {std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()};
 }
 void write_file(const fs::path& path, const std::string& data) {
     auto dir = path.parent_path();
     if (!dir.empty()) fs::create_directories(dir);
     std::ofstream out(path, std::ios::binary);
-    if (!out) throw std::runtime_error("cannot write " + path.u8string());
+    if (!out) throw std::runtime_error("cannot write " + utf8_bytes(path.u8string()));
     out << data;
-    if (!out) throw std::runtime_error("I/O failure writing " + path.u8string());
+    if (!out) throw std::runtime_error("I/O failure writing " + utf8_bytes(path.u8string()));
 }
 fs::path resolve(const fs::path& root, const fs::path& path) {
     return path.is_absolute() ? path : root / path;
@@ -212,7 +219,7 @@ Process exec(const std::vector<std::string>& args, const fs::path& cwd, bool sep
     si.hStdOutput=write_end;
     si.hStdError=separate_error?error_write:write_end;
     PROCESS_INFORMATION pi{};
-    auto mutable_cmd=fs::u8path(command_line).wstring();
+    auto mutable_cmd=path_from_utf8(command_line).wstring();
     const auto dir=cwd.wstring();
     const BOOL created=CreateProcessW(nullptr,mutable_cmd.data(),nullptr,nullptr,TRUE,0,nullptr,
                                       dir.empty()?nullptr:dir.c_str(),&si,&pi);
@@ -310,7 +317,7 @@ Process exec(const std::vector<std::string>& args, const fs::path& cwd, bool sep
 
 std::string usage(bool check_program) {
     std::ostringstream o;
-    o << (check_program ? "cpp-rails-check" : "cpp-rails-audit") << " — C++17 native engineering guardrails\n";
+    o << (check_program ? "cpp-rails-check" : "cpp-rails-audit") << " — C++23 native engineering guardrails\n";
     o << (check_program ? "Usage: cpp-rails-check [options]\n" :
           "Usage: cpp-rails-audit [audit|triage|topology|baseline|templates|perf compare|perf analyze] [options]\n");
     o << "  --root PATH           C++ project root (default '.')\n"
@@ -363,24 +370,24 @@ Options parse_options(bool check_program,const std::vector<std::string>& args) {
     for (;i<args.size();++i) {
         const auto a=args[i];
         if (a=="--help"||a=="-h") opt.help=true;
-        else if(a=="--root") opt.root=fs::u8path(next(a));
+        else if(a=="--root") opt.root=path_from_utf8(next(a));
         else if(a=="--profile") opt.profile=next(a);
-        else if(a=="--profile-file") opt.profile_file=fs::u8path(next(a));
+        else if(a=="--profile-file") opt.profile_file=path_from_utf8(next(a));
         else if(a=="--format") opt.format=next(a);
-        else if(a=="--output") opt.output=fs::u8path(next(a));
+        else if(a=="--output") opt.output=path_from_utf8(next(a));
         else if(a=="--changed") opt.changed=true;
-        else if(a=="--baseline") opt.baseline=fs::u8path(next(a));
-        else if(a=="--exception-file") opt.exception_file=fs::u8path(next(a));
+        else if(a=="--baseline") opt.baseline=path_from_utf8(next(a));
+        else if(a=="--exception-file") opt.exception_file=path_from_utf8(next(a));
         else if(a=="--strict") opt.strict=true;
-        else if(a=="--source") opt.source=fs::u8path(next(a));
+        else if(a=="--source") opt.source=path_from_utf8(next(a));
         else if(a=="--compiler") opt.compiler=next(a);
         else if(a=="--std") opt.cpp_standard=next(a);
-        else if(a=="--results") opt.results=fs::u8path(next(a));
+        else if(a=="--results") opt.results=path_from_utf8(next(a));
         else if(a=="--max-regression") opt.max_regression=std::stod(next(a));
         else if(a=="--min-samples") opt.min_samples=static_cast<unsigned>(std::stoul(next(a)));
         else if(a=="--check") opt.compile_checks=true;
         else if(a=="--expect-error") opt.expect_error=next(a);
-        else if(a=="--build-dir") opt.build_dir=fs::u8path(next(a));
+        else if(a=="--build-dir") opt.build_dir=path_from_utf8(next(a));
         else if(a=="--config") opt.config=next(a);
         else if(a=="--configure") opt.configure=true;
         else if(a=="--no-build") opt.no_build=true;
@@ -388,11 +395,11 @@ Options parse_options(bool check_program,const std::vector<std::string>& args) {
         else if(a=="--lint") opt.lint=true;
         else if(a=="--sanitizer") opt.sanitizer=next(a);
         else if(a=="--compiler-matrix") opt.compiler_matrix=next(a);
-        else if(a=="--abi-old") opt.abi_old=fs::u8path(next(a));
-        else if(a=="--abi-new") opt.abi_new=fs::u8path(next(a));
+        else if(a=="--abi-old") opt.abi_old=path_from_utf8(next(a));
+        else if(a=="--abi-new") opt.abi_new=path_from_utf8(next(a));
         else if(a=="--lifetime") opt.lifetime=true;
         else if(a=="--exclude-tests") opt.exclude_tests=true;
-        else if(a=="--include-dir") opt.include_dirs.push_back(fs::u8path(next(a)));
+        else if(a=="--include-dir") opt.include_dirs.push_back(path_from_utf8(next(a)));
         else throw std::runtime_error("unknown argument "+a);
     }
     if (!opt.help) {
@@ -541,14 +548,14 @@ std::string sarif(const Report& r) {
     for (auto& f:r.findings) rule_examples.emplace(f.rule,&f);
     std::ostringstream out;
     out<<"{\"$schema\":\"https://json.schemastore.org/sarif-2.1.0.json\",\"version\":\"2.1.0\",\"runs\":[{"
-       <<"\"tool\":{\"driver\":{\"name\":\"cpp-rails\",\"version\":\"3.1.0\",\"rules\":[";
+       <<"\"tool\":{\"driver\":{\"name\":\"cpp-rails\",\"version\":\"1.3.0\",\"rules\":[";
     bool first=true;
     for (auto& [rule,f]:rule_examples) {
         if(!first)out<<',';first=false;
         out<<"{\"id\":"<<json_quote(rule)<<",\"shortDescription\":{\"text\":"<<json_quote(f->message)
            <<"},\"help\":{\"text\":"<<json_quote(f->recommendation)<<"}}";
     }
-    std::string root_uri=fs::u8path(r.root).generic_u8string();
+    std::string root_uri=utf8_bytes(path_from_utf8(r.root).generic_u8string());
     if (root_uri.empty() || root_uri.back()!='/') root_uri.push_back('/');
     if (root_uri.front()!='/') root_uri="/"+root_uri;
     out<<"]}},\"originalUriBaseIds\":{\"SRCROOT\":{\"uri\":"<<json_quote("file://"+uri_escape(root_uri))<<"}},\"results\":[";
@@ -577,7 +584,7 @@ std::string sarif(const Report& r) {
 
 std::string relative_path(const fs::path& file,const fs::path& root) {
     auto rel=file.lexically_relative(root);
-    return (rel.empty()?file:rel).generic_u8string();
+    return utf8_bytes((rel.empty()?file:rel).generic_u8string());
 }
 std::string make_id(const std::string& rule,const std::string& path,const std::string& evidence,unsigned occurrence) {
     const auto source=rule+"|"+path+"|"+trim(evidence)+"|"+std::to_string(occurrence);
@@ -596,7 +603,7 @@ std::set<std::string> changed_paths(const fs::path& root,std::vector<std::string
     if(!top.started||top.exit_code!=0) throw std::runtime_error("--changed requires a Git working tree");
     auto top_text=top.output;
     while(!top_text.empty()&&(top_text.back()=='\n'||top_text.back()=='\r'))top_text.pop_back();
-    const auto repo=fs::canonical(fs::u8path(top_text));
+    const auto repo=fs::canonical(path_from_utf8(top_text));
     const auto scope=fs::canonical(root);
     auto tracked=git({"git","diff","--name-only","--no-renames","-z","HEAD","--"},repo);
     auto added=git({"git","ls-files","-z","--others","--exclude-standard"},repo);
@@ -607,9 +614,9 @@ std::set<std::string> changed_paths(const fs::path& root,std::vector<std::string
         if(!text.empty()&&text.back()!='\0')throw std::runtime_error("incomplete NUL-delimited Git paths");
         std::istringstream in(text);std::string name;
         while(std::getline(in,name,'\0')) {
-            const auto relative=(repo/fs::u8path(name)).lexically_normal().lexically_relative(scope);
+            const auto relative=(repo/path_from_utf8(name)).lexically_normal().lexically_relative(scope);
             if(relative.empty()||*relative.begin()=="..")continue; // explicitly outside --root
-            found.insert(relative.generic_u8string()); // retain deletions; scanner only reads existing files
+            found.insert(utf8_bytes(relative.generic_u8string())); // retain deletions; scanner only reads existing files
         }
     }
     if (tracked.output.size()>=128*1024||added.output.size()>=128*1024)
@@ -620,11 +627,11 @@ namespace {
 const std::set<std::string> excluded={".git",".svn","target","build","_build",".cpp-rails","node_modules",
     "vendor","third_party","external","_deps","generated",".cache","out","dist","cmake-build-debug","cmake-build-release"};
 bool is_source(const fs::path& p) {
-    const auto ext=lower(p.extension().u8string());
+    const auto ext=lower(utf8_bytes(p.extension().u8string()));
     return std::set<std::string>{".cpp",".cc",".cxx",".c",".h",".hpp",".hh",".hxx",".ipp",".tpp",".ixx"}.count(ext)!=0;
 }
 bool is_header(const fs::path& p) {
-    const auto ext=lower(p.extension().u8string());
+    const auto ext=lower(utf8_bytes(p.extension().u8string()));
     return ext==".h"||ext==".hpp"||ext==".hh"||ext==".hxx";
 }
 std::string mask_code(const std::string& src) {
@@ -696,7 +703,7 @@ bool path_is_test(const std::string& rel) {
     while (std::getline(parts,part,'/')) components.push_back(part);
     if (components.empty()) return false;
     for (std::size_t i=0;i+1<components.size();++i) if (dirs.count(lower(components[i]))) return true;
-    const auto stem=fs::u8path(components.back()).stem().u8string();
+    const auto stem=utf8_bytes(path_from_utf8(components.back()).stem().u8string());
     const auto low=lower(stem);
     auto ends=[&](const std::string& s){return low.size()>s.size() && low.compare(low.size()-s.size(),s.size(),s)==0;};
     if (ends("_test")||ends("_tests")||ends("_unittest")||ends("_unittests")||ends("_mock")||ends("_mocks")
@@ -807,7 +814,7 @@ Scan scan(const fs::path& root,const std::optional<std::set<std::string>>& chang
         if(ec){++scan_result.skipped;ec.clear();it.increment(ec);continue;}
         if(symlink) {++scan_result.skipped;it.disable_recursion_pending();it.increment(ec);continue;}
         if(it->is_directory(ec)) {
-            if(excluded.count(path.filename().u8string())) it.disable_recursion_pending();
+            if(excluded.count(utf8_bytes(path.filename().u8string()))) it.disable_recursion_pending();
         } else if(it->is_regular_file(ec) && is_source(path)) {
             const auto rel=relative_path(path,root);
             if (exclude_tests && path_is_test(rel)) ++scan_result.tests_excluded;
@@ -818,7 +825,7 @@ Scan scan(const fs::path& root,const std::optional<std::set<std::string>>& chang
             }
         }
         ec.clear();it.increment(ec);
-        if(ec){scan_result.notes.push_back("scan incomplete at "+path.u8string()+": "+ec.message());ec.clear();}
+        if(ec){scan_result.notes.push_back("scan incomplete at "+utf8_bytes(path.u8string())+": "+ec.message());ec.clear();}
     }
     std::sort(scan_result.files.begin(),scan_result.files.end());
     for(auto& p:scan_result.files) {
@@ -898,7 +905,7 @@ Profile load_profile(const Options& opt,const fs::path& root,Report& report) {
             else if(section=="[performance]" && key=="min_samples_per_variant")p.min_samples=std::stoul(value);
             else if(section=="[performance]" && key=="max_median_regression_percent")p.max_regression_pct=std::stod(value);
         }
-        report.notes.push_back("Reviewed explicit policy loaded: "+file.u8string());
+        report.notes.push_back("Reviewed explicit policy loaded: "+utf8_bytes(file.u8string()));
     } else report.notes.push_back("Built-in policy "+opt.profile+"; target repository policies are NOT auto-loaded");
     if(p.min_samples<2||!std::isfinite(p.max_regression_pct)||p.max_regression_pct<0)
         throw std::runtime_error("invalid performance limits in profile");
@@ -990,7 +997,7 @@ std::vector<std::string> split(const std::string& text,char separator) {
     return out;
 }
 std::vector<std::string> positive_compiler_flags(const Options& opt) {
-    const auto lower_name=lower(fs::path(opt.compiler).filename().u8string());
+    const auto lower_name=lower(utf8_bytes(fs::path(opt.compiler).filename().u8string()));
     if (lower_name=="cl"||lower_name=="cl.exe")return {opt.compiler,"/nologo","/std:"+opt.cpp_standard,"/Zs"};
     return {opt.compiler,"-std="+opt.cpp_standard,"-Wall","-Wextra","-fsyntax-only"};
 }
@@ -1004,8 +1011,8 @@ void template_gate(const Options& opt,const fs::path& root,Report& report) {
         return;
     }
     const auto source=resolve(root,*opt.source);
-    if (!fs::is_regular_file(source)) throw std::runtime_error("missing template instantiation source: "+source.u8string());
-    auto args=positive_compiler_flags(opt);args.push_back(source.u8string());
+    if (!fs::is_regular_file(source)) throw std::runtime_error("missing template instantiation source: "+utf8_bytes(source.u8string()));
+    auto args=positive_compiler_flags(opt);args.push_back(utf8_bytes(source.u8string()));
     auto result=exec(args,root);
     if (!result.started)report.gate("template instantiation",Status::Unverified,"compiler not available: "+opt.compiler);
     else if (!opt.expect_error.empty()) {
@@ -1018,13 +1025,13 @@ void template_gate(const Options& opt,const fs::path& root,Report& report) {
 void compiler_remarks(const Options& opt,const fs::path& root,Report& report) {
     if (!opt.source) {report.gate("compiler optimization remarks",Status::Unverified,"--source is required");return;}
     const auto source=resolve(root,*opt.source);
-    if (!fs::is_regular_file(source))throw std::runtime_error("source not found: "+source.u8string());
-    const auto comp=lower(fs::path(opt.compiler).filename().u8string());
+    if (!fs::is_regular_file(source))throw std::runtime_error("source not found: "+utf8_bytes(source.u8string()));
+    const auto comp=lower(utf8_bytes(fs::path(opt.compiler).filename().u8string()));
     if(comp=="cl.exe"||comp=="cl"){
         report.gate("compiler optimization remarks",Status::Unverified,"MSVC standalone optimization remarks are not automated; use /Qvec-report or toolchain profiler");return;
     }
     const auto scratch=fs::temp_directory_path() / ("cpp-rails-asm-"+std::to_string(std::chrono::steady_clock::now().time_since_epoch().count())+".s");
-    std::vector<std::string> args={opt.compiler,"-std="+opt.cpp_standard,"-O3","-S",source.u8string(),"-o",scratch.u8string()};
+    std::vector<std::string> args={opt.compiler,"-std="+opt.cpp_standard,"-O3","-S",utf8_bytes(source.u8string()),"-o",utf8_bytes(scratch.u8string())};
     if(comp.find("clang")!=std::string::npos){
         args.insert(args.begin()+3,{"-Rpass=loop-vectorize","-Rpass-missed=loop-vectorize","-Rpass-analysis=loop-vectorize"});
     } else {
@@ -1051,7 +1058,7 @@ std::vector<fs::path> compile_db_include_dirs(const fs::path& database,const fs:
     std::set<std::string> seen;
     for (std::sregex_iterator it(unescaped.begin(),unescaped.end(),flag),end;it!=end && dirs.size()<64;++it) {
         const fs::path dir=resolve(root,fs::path((*it)[1].str())).lexically_normal();
-        if (seen.insert(dir.generic_u8string()).second && fs::is_directory(dir,ec)) dirs.push_back(dir);
+        if (seen.insert(utf8_bytes(dir.generic_u8string())).second && fs::is_directory(dir,ec)) dirs.push_back(dir);
     }
     return dirs;
 }
@@ -1166,7 +1173,7 @@ void ctest_gate(const fs::path& build,const std::string& config,const std::strin
         report.gate(name,status,"passed="+std::to_string(passed)+", failed="+std::to_string(failed)+
             ", skipped="+std::to_string(skipped)+", disabled="+std::to_string(disabled)+", unverified="+std::to_string(unknown)+
             "; "+(complete?"structured results":"incomplete structured results")+"; exit="+std::to_string(process.exit_code)+
-            "; evidence="+file.u8string(),required);
+            "; evidence="+utf8_bytes(file.u8string()),required);
     } catch(const std::exception& e) {report.gate(name,Status::Unverified,std::string("cannot verify fresh CTest evidence: ")+e.what(),required);}
 }
 void sanitizer_gate(const Options& opt,const fs::path& root,const std::string& mode,Report& report) {
@@ -1176,14 +1183,14 @@ void sanitizer_gate(const Options& opt,const fs::path& root,const std::string& m
     }
     const auto work=root/".cpp-rails"/("build-"+mode);
     const std::string flags=(mode=="tsan"?"-fsanitize=thread":"-fsanitize=address,undefined")+std::string(" -fno-omit-frame-pointer -g -O1");
-    const auto config=exec({"cmake","-S",root.u8string(),"-B",work.u8string(),
+    const auto config=exec({"cmake","-S",utf8_bytes(root.u8string()),"-B",utf8_bytes(work.u8string()),
         "-DCMAKE_CXX_COMPILER="+opt.compiler,"-DCMAKE_CXX_FLAGS="+flags,"-DCMAKE_EXE_LINKER_FLAGS="+flags,
         "-DCMAKE_SHARED_LINKER_FLAGS="+flags,"-DCMAKE_BUILD_TYPE=Debug","-DBUILD_TESTING=ON"},root);
     record_command(report,mode+" configure",config,true);
     if(!config.started || config.exit_code!=0) {
         report.gate(mode+" tests",Status::Unverified,"configure failed; instrumented tests were not run");return;
     }
-    const auto build=exec({"cmake","--build",work.u8string(),"--config","Debug","--parallel","2"},root);
+    const auto build=exec({"cmake","--build",utf8_bytes(work.u8string()),"--config","Debug","--parallel","2"},root);
     record_command(report,mode+" build",build,true);
     if(!build.started || build.exit_code!=0){report.gate(mode+" tests",Status::Unverified,"instrumented build failed; tests were not run");return;}
     ctest_gate(work,"Debug",mode+" tests",true,report);
@@ -1202,7 +1209,7 @@ void cmake_gate(const Options& opt,const fs::path& root,const Profile& profile,R
             if(!fs::exists(root/"CMakeLists.txt")) {
                 report.gate("CMake configure",Status::Unverified,"target project does not use CMake");return;
             }
-            std::vector<std::string> configure_args={"cmake","-S",root.u8string(),"-B",build.u8string(),"-DCMAKE_EXPORT_COMPILE_COMMANDS=ON","-DBUILD_TESTING=ON"};
+            std::vector<std::string> configure_args={"cmake","-S",utf8_bytes(root.u8string()),"-B",utf8_bytes(build.u8string()),"-DCMAKE_EXPORT_COMPILE_COMMANDS=ON","-DBUILD_TESTING=ON"};
             if(opt.config) configure_args.push_back("-DCMAKE_BUILD_TYPE="+*opt.config);
             const auto conf=exec(configure_args,root);
             record_command(report,"CMake configure",conf,true);
@@ -1212,7 +1219,7 @@ void cmake_gate(const Options& opt,const fs::path& root,const Profile& profile,R
                 return;
             }
         }
-        const auto b=exec({"cmake","--build",build.u8string(),"--config",build_config(opt,build),"--parallel","2"},root);
+        const auto b=exec({"cmake","--build",utf8_bytes(build.u8string()),"--config",build_config(opt,build),"--parallel","2"},root);
         record_command(report,"CMake build",b,profile.require_build);
         if(!b.started||b.exit_code!=0){
             if(profile.require_tests&&!opt.no_tests)report.gate("CTest",Status::Unverified,"build failed, tests not run");
@@ -1235,15 +1242,15 @@ void lint_gate(const Options& opt,const fs::path& root,const std::vector<fs::pat
         report.gate("clang-tidy",Status::Unverified,"compilation database missing; configure with CMAKE_EXPORT_COMPILE_COMMANDS=ON",required);return;
     }
     std::vector<fs::path> units;
-    for(auto& path:files)if(!is_header(path)&&lower(path.extension().u8string())!=".c")units.push_back(path);
+    for(auto& path:files)if(!is_header(path)&&lower(utf8_bytes(path.extension().u8string()))!=".c")units.push_back(path);
     if (units.empty()) {
         report.gate("clang-tidy",Status::NotApplicable,"no C++ translation units in selected scope",false);return;
     }
     if(units.size()>30) {
         report.gate("clang-tidy",Status::Unverified,"scope has "+std::to_string(units.size())+" translation units; CLI limit is 30 to avoid surprise long-running repository scan",required);return;
     }
-    std::vector<std::string> argv={"clang-tidy","-p",build.u8string(),"--warnings-as-errors=*"};
-    for(auto& f:units)argv.push_back(f.u8string());
+    std::vector<std::string> argv={"clang-tidy","-p",utf8_bytes(build.u8string()),"--warnings-as-errors=*"};
+    for(auto& f:units)argv.push_back(utf8_bytes(f.u8string()));
     const auto r=exec(argv,root);record_command(report,"clang-tidy",r,required);
     report.notes.push_back("clang-tidy runs without --fix; project .clang-tidy policy and compiler database may alter warnings");
 }
@@ -1255,7 +1262,7 @@ void abi_gate(const Options& opt,const fs::path& root,Report& report,bool requir
     if(!fs::is_regular_file(old)||!fs::is_regular_file(newer)) {
         report.gate("ABI compatibility",Status::Unverified,"ABI library path(s) do not exist",required);return;
     }
-    const auto r=exec({"abidiff",old.u8string(),newer.u8string()},root);
+    const auto r=exec({"abidiff",utf8_bytes(old.u8string()),utf8_bytes(newer.u8string())},root);
     record_command(report,"ABI compatibility",r,required);
     report.notes.push_back("abidiff is platform/toolchain dependent and may require debug symbols; public source/API/consumer compatibility still needs separate verification");
 }
@@ -1271,11 +1278,11 @@ void compiler_matrix_gate(const Options& opt,const fs::path& root,Report& report
         std::string safe;
         for(unsigned char ch:c)safe.push_back(std::isalnum(ch)?ch:'_');
         const auto work=root/".cpp-rails"/("matrix-"+safe);
-        auto conf=exec({"cmake","-S",root.u8string(),"-B",work.u8string(),"-DCMAKE_CXX_COMPILER="+c,"-DBUILD_TESTING=ON"},root);
+        auto conf=exec({"cmake","-S",utf8_bytes(root.u8string()),"-B",utf8_bytes(work.u8string()),"-DCMAKE_CXX_COMPILER="+c,"-DBUILD_TESTING=ON"},root);
         record_command(report,c+" matrix configure",conf,true);
         if(!conf.started||conf.exit_code!=0)continue;
         const auto config=build_config(opt,work);
-        auto build=exec({"cmake","--build",work.u8string(),"--config",config,"--parallel","2"},root);
+        auto build=exec({"cmake","--build",utf8_bytes(work.u8string()),"--config",config,"--parallel","2"},root);
         record_command(report,c+" matrix build",build,true);
         if(!build.started||build.exit_code!=0)continue;
         ctest_gate(work,config,c+" matrix tests",true,report);
@@ -1290,7 +1297,7 @@ void lifetime_gate(const Options& opt,const fs::path& root,Report& report) {
     if(!fs::is_regular_file(source)) {
         report.gate("lifetime warnings",Status::Unverified,"source does not exist");return;
     }
-    auto r=exec({opt.compiler,"-std="+opt.cpp_standard,"-fsyntax-only","-Wall","-Wextra","-Wdangling","-Werror=dangling",source.u8string()},root);
+    auto r=exec({opt.compiler,"-std="+opt.cpp_standard,"-fsyntax-only","-Wall","-Wextra","-Wdangling","-Werror=dangling",utf8_bytes(source.u8string())},root);
     if(!r.started)report.gate("lifetime warnings",Status::Unverified,"compiler not available");
     else if(r.output.find("unknown warning")!=std::string::npos||r.output.find("unrecognized command-line option")!=std::string::npos)
         report.gate("lifetime warnings",Status::Unverified,"compiler does not support requested diagnostic");
@@ -1350,7 +1357,7 @@ void benchmark_compare(const fs::path& file,unsigned min_samples,double max_pct,
 int dispatch(const Options& opt,Report& report) {
     const auto root=fs::canonical(opt.root.value_or(fs::path(".")));
     if(!fs::is_directory(root))throw std::runtime_error("root is not a directory");
-    report.root=root.u8string();report.profile=opt.profile;
+    report.root=utf8_bytes(root.u8string());report.profile=opt.profile;
     report.action=opt.action+(opt.subaction.empty()?"":" "+opt.subaction);
     auto profile=load_profile(opt,root,report);
     if(opt.action=="perf") {
@@ -1363,7 +1370,7 @@ int dispatch(const Options& opt,Report& report) {
         auto changed=opt.changed?std::optional<std::set<std::string>>(changed_paths(root,&report.notes)):std::nullopt;
         auto result=scan(root,changed,opt.profile,opt.exclude_tests);
         if(changed) {
-            std::size_t missing=0;for(const auto& path:*changed)if(!fs::exists(root/fs::u8path(path)))++missing;
+            std::size_t missing=0;for(const auto& path:*changed)if(!fs::exists(root/path_from_utf8(path)))++missing;
             report.notes.push_back("Changed scope: "+std::to_string(changed->size())+" paths inside --root, "+std::to_string(missing)+
                 " deleted/missing (not scanned); repository paths outside --root are excluded. Renames include old and new paths; untracked files included.");
         }
@@ -1379,7 +1386,7 @@ int dispatch(const Options& opt,Report& report) {
         if(opt.action=="baseline") {
             const auto file=resolve(root,opt.output.value_or(fs::path(".cpp-rails/baseline.txt")));
             write_baseline(file,report);
-            report.gate("heuristic baseline",Status::Pass,"wrote "+std::to_string(report.findings.size())+" candidate IDs to "+file.u8string()+"; manually review");
+            report.gate("heuristic baseline",Status::Pass,"wrote "+std::to_string(report.findings.size())+" candidate IDs to "+utf8_bytes(file.u8string())+"; manually review");
             return 0;
         }
         if(opt.baseline)load_baseline(resolve(root,*opt.baseline),report);
@@ -1389,7 +1396,7 @@ int dispatch(const Options& opt,Report& report) {
             for (auto& d:opt.include_dirs) dirs.push_back(resolve(root,d).lexically_normal());
             for (auto& db:{resolve(root,opt.build_dir.value_or(fs::path("build")))/"compile_commands.json",root/"compile_commands.json"}) {
                 auto found=compile_db_include_dirs(db,root);
-                if (!found.empty()) report.notes.push_back("Include dirs read from "+db.u8string()+": "+std::to_string(found.size()));
+                if (!found.empty()) report.notes.push_back("Include dirs read from "+utf8_bytes(db.u8string())+": "+std::to_string(found.size()));
                 dirs.insert(dirs.end(),found.begin(),found.end());
             }
             report_topology(root,result.files,dirs,report);

@@ -19,7 +19,7 @@ static bool missing_insert(const cpprails::Process& result, bool msvc) {
         std::smatch match;if(!std::regex_match(line,match,diagnostic))continue;
         if(msvc&&match[1]!="C2039")continue;
         const auto message=match[msvc?2:1].str();
-        const bool symbol=message.find("\"insert\"")!=std::string::npos||message.find("'insert'")!=std::string::npos||message.find(u8"\u2018insert\u2019")!=std::string::npos;
+        const bool symbol=message.find("\"insert\"")!=std::string::npos||message.find("'insert'")!=std::string::npos||message.find(cpprails::utf8_bytes(u8"\u2018insert\u2019"))!=std::string::npos;
         if(symbol&&message.find("array")!=std::string::npos&&
            (msvc||message.find("no member named")!=std::string::npos||message.find("has no member")!=std::string::npos))return true;
     }
@@ -39,10 +39,10 @@ int main(int argc, char** argv) {
     const auto exe=fs::path(compiler).filename().string();
     const bool msvc=exe=="cl"||exe=="cl.exe";
     const auto work=fs::current_path();
-    auto compile=[&](const std::string& name) {
+    auto compile=[&](const std::string& name, bool cpp17 = false) {
         std::vector<std::string> args;
-        if(msvc)args={compiler,"/nologo","/std:c++20","/Zs",(dir/name).u8string()};
-        else args={compiler,"-std=c++20","-Wall","-Wextra","-pedantic","-fsyntax-only","-fdiagnostics-color=never",(dir/name).u8string()};
+        if(msvc)args={compiler,"/nologo",cpp17?"/std:c++17":"/std:c++20","/Zs",cpprails::utf8_bytes((dir/name).u8string())};
+        else args={compiler,cpp17?"-std=c++17":"-std=c++20","-Wall","-Wextra","-pedantic","-fsyntax-only","-fdiagnostics-color=never",cpprails::utf8_bytes((dir/name).u8string())};
         return cpprails::exec(args,work);
     };
     auto positive=compile("concepts_positive.cpp");
@@ -63,7 +63,7 @@ int main(int argc, char** argv) {
     fs::create_directories(scratch);
     for(const auto& source:{"#error insert array unrelated failure\n","#include <insert_array_missing_fixture_header.h>\n"}) {
         const auto file=scratch/"insert_array.cpp";std::ofstream(file)<<source;
-        const auto unrelated=compile(file.u8string());
+        const auto unrelated=compile(cpprails::utf8_bytes(file.u8string()));
         if(!unrelated.started||unrelated.exit_code==0||missing_insert(unrelated,msvc)) {
             std::cerr<<"negative harness accepted unrelated failure: "<<unrelated.output<<'\n';fs::remove_all(scratch);return 1;
         }
@@ -73,6 +73,15 @@ int main(int argc, char** argv) {
     if(!lifetime.started||lifetime.exit_code!=0){
         std::cerr << "lifetime positive fixture failed: " << lifetime.output << '\n';return 1;
     }
-    std::cout << "Concrete positive and negative template compilations PASS; positive lifetime fixture PASS\n";
+    // Unsafe C++ can be well-formed. These review fixtures must compile but
+    // never run here; no diagnostic detection or absence of UB is inferred.
+    for(const auto& name:{"safety_contracts_positive.cpp","safety_contracts_negative.cpp"}) {
+        const auto safety=compile(name,true);
+        if(!safety.started||safety.exit_code!=0) {
+            std::cerr << "C++17 safety example syntax failed: " << name << '\n'
+                      << safety.output << '\n';return 1;
+        }
+    }
+    std::cout << "Concrete positive and negative template compilations PASS; positive lifetime fixture PASS; C++17 safety example syntax PASS (not semantic verification)\n";
     return 0;
 }

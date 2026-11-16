@@ -6,17 +6,17 @@ description: >-
   concurrency, FFI/API/ABI, compiler optimization and measurable performance. Activates
   for native libraries, game/telemetry engines, backend C++, CMake, legacy systems,
   code review, unsafe code and C++↔Rust/Flutter interfaces. Four modes: audit,
-  implement, refactor and deep-refactor. Native C++17 tools; no Python/Rust runtime.
+  implement, refactor and deep-refactor. Native C++23 tools; no Python/Rust runtime.
 license: MIT
-compatibility: A C++17 compiler and CMake 3.16+ to build the optional CLI; external project tools are discovered, never assumed.
+compatibility: A compiler supporting the tools in C++23 mode and CMake 3.20+ to build the optional CLI; target-project standards and external tools are discovered, never assumed.
 metadata:
-  version: "3.1.0"
+  version: "1.3.0"
   family: "engineering-guardrails"
   hermes:
     tags: [cpp, guardrails, audit, refactoring, performance, memory-safety]
 ---
 
-# C++ Engineering Guardrails · V3
+# C++ Engineering Guardrails · v1.3.0
 
 **Mission:** Produce correct, understandable, maintainable and demonstrably efficient C++ code while respecting each project's requirements. This skill is not a style-enforcement bot, a promise of UB-free C++, or an excuse to rewrite working code.
 
@@ -63,6 +63,11 @@ A user can combine a mode with a profile: `general`, `legacy-code`, `library-sdk
 | Code signal or task | Read these reference files |
 |---|---|
 | Ownership, raw pointers, UB, allocators | `references/memory-lifetime-ub.md`, `references/state-resource-lifecycle.md` |
+| Safety guarantees, evidence coverage or safety policy | `references/safety-intelligence.md` |
+| Opaque calls, escaping borrows, resource effects across functions | `references/function-contracts.md` |
+| Partial initialization, output buffers, storage reuse, invalidation | `references/initialization-invalidation.md` |
+| Safety adoption, unsafe-boundary migration, Fil-C/scpptool evaluation | `references/safety-adoption.md` |
+| C++ standard/toolchain upgrade, C++23/C++26 adoption | `references/language-standard-upgrades.md`, `references/build-dependencies.md` |
 | Domain modeling, invalid state, errors | `references/type-safety-and-contracts.md` |
 | Components, libraries, compile-time boundaries | `references/architecture-and-boundaries.md`, `references/decision-matrix.md`, `references/build-dependencies.md` |
 | Templates/concepts/SFINAE | `references/templates-and-concepts.md`, `references/sfinae-and-constraints.md`, `references/generic-programming.md` |
@@ -77,6 +82,18 @@ A user can combine a mode with a profile: `general`, `legacy-code`, `library-sdk
 | Concrete counterexamples for window ownership, successful COM acquisition or skipped samples | `references/code-evidence.md` |
 
 Additional specialist references: `references/anti-slop-patterns.md`, `references/simd-vectorization.md`, `references/compiler-regressions.md`, `references/testing-verification.md`, `references/sources.md`. **Do not read all at once.**
+
+### Safety Intelligence (when safety is in scope)
+
+Map resource owners, borrows, invalidation events and consequential call effects.
+Use `templates/function-contract.md` for version-bound summaries; unavailable,
+stale or conflicting effects remain unknown. Use `templates/safety-evidence.md`
+to report lifetime, invalidation, initialization, bounds and thread safety with
+property-specific PASS/FAIL/UNVERIFIED/N/A, assumptions and uncovered scope.
+A passing tool run is evidence within its coverage, not a whole-component safety
+proof. Engineering profiles and CLI `--strict` do not implement WG21 Safety
+Profiles. The proposed `safety ...` commands and `--safety-profile` are not
+implemented. See `references/safety-adoption.md` for adoption and engine roadmap.
 
 ## Protocol · DISCOVER → (RECALL) → ANALYZE → PLAN → IMPLEMENT → VERIFY → REVIEW → REPORT
 
@@ -100,7 +117,16 @@ Additional specialist references: `references/anti-slop-patterns.md`, `reference
 
 ## Native C++ tooling (`cpp-rails`, optional)
 
-Both supplied tools are written in **C++17**, with no Rust/Python source, dependencies or runtimes. `CMake` is used only to build them. Compiler/static analysis remains delegated to GCC/Clang/MSVC, clang-tidy, sanitizers, CTest and optional `abidiff`.
+Both supplied tools and their runners use **C++23**, with no Rust/Python source,
+dependencies or runtimes. Building them requires CMake 3.20+ and a compiler that
+can build this code in C++23 mode; this does not imply complete C++23 conformance.
+The separate safety/concept fixtures retain explicit C++17/C++20 checks. The
+standard of the analyzed project remains project-defined; the standalone CLI
+`--std` default remains `c++20` and can be selected explicitly. C++26 is a
+development standard, not the required baseline. `CMake` is build infrastructure;
+analysis remains delegated to GCC/Clang/MSVC, clang-tidy, sanitizers, CTest and
+optional `abidiff`. See `references/language-standard-upgrades.md` when upgrading
+either the tools or a target project's standard.
 
 ```bash
 # In the skill's directory:

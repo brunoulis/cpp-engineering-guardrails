@@ -1,7 +1,7 @@
-# C++ Engineering Guardrails v3
+# C++ Engineering Guardrails v1.3.0
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-![C++17](https://img.shields.io/badge/tools-C%2B%2B17-blue.svg)
+![C++23](https://img.shields.io/badge/tools-C%2B%2B23-blue.svg)
 ![Agents](https://img.shields.io/badge/agents-Claude%20Code%20%7C%20Codex%20%7C%20Hermes-555.svg)
 
 An installable **agent skill** for Claude Code, Codex and Hermes that guides coding agents to **write, audit, refactor and migrate C++** with evidence instead of opinions: real builds and tests, explicit ownership and lifetimes, measured performance and honest verification status.
@@ -10,7 +10,12 @@ It distills lessons from the sibling skills `rust-engineering-guardrails` and `f
 
 > Español: [README.es.md](README.es.md)
 
-**C++-only tooling.** The bundled helpers (`cpp-rails-audit`, `cpp-rails-check` and their tests) are written **exclusively in C++17**. No Rust, Python, Cargo, `pip` or shell audit scripts are shipped. CMake/CTest are only build/test infrastructure; GCC/Clang/MSVC, sanitizers, `clang-tidy` and `abidiff` are optional external tools that are discovered, never assumed.
+**C++-only tooling.** The bundled helpers (`cpp-rails-audit`, `cpp-rails-check` and
+their runners) build in **C++23** mode. Explicit C++17 safety and C++20 concept
+fixtures exercise older analyzed code. No Rust, Python, Cargo, `pip` or shell
+audit scripts are shipped. CMake/CTest are build/test infrastructure;
+GCC/Clang/MSVC, sanitizers, `clang-tidy` and `abidiff` are optional external tools
+that are discovered, never assumed.
 
 ## What's inside
 
@@ -21,8 +26,8 @@ It distills lessons from the sibling skills `rust-engineering-guardrails` and `f
 | `references/` | Memory/lifetime/UB, types and contracts, state and resource lifecycle, native UI and event loops, cancellation/backpressure, concurrency, templates/concepts, security, API/ABI/FFI, determinism, testing, architecture, data layout, compiler optimization, reviewer protocol |
 | `profiles/` | `general`, `low-latency`, `library-sdk`, `legacy-code`, `engine`, `service`, `native-ui`, `ffi`, `prototype` — risk hypotheses, not rigid styles |
 | `policies/` | P0–P3 severities, change-dependent quality gates, expiring suppressions |
-| `tools/cpp-rails/` | C++17 library + CLIs: heuristic scanner, baseline, triage, include topology, JSON/Markdown reports, CMake/CTest runner, `clang-tidy`, sanitizers, compiler matrix, template instantiation checks, CSV/TSV benchmark comparison |
-| `tests/` | Positive/negative C++20 fixtures driven by CTest |
+| `tools/cpp-rails/` | C++23 library + CLIs: heuristic scanner, baseline, triage, include topology, JSON/Markdown reports, CMake/CTest runner, `clang-tidy`, sanitizers, compiler matrix, template instantiation checks, CSV/TSV benchmark comparison |
+| `tests/` | C++17 safety examples and positive/negative C++20 template fixtures driven by CTest |
 | `templates/`, `examples/` | Report, ADR, refactor plan, finding, reviewer checklist, project profile, FFI contract and ready-to-use prompts |
 
 ## The four modes
@@ -35,6 +40,20 @@ It distills lessons from the sibling skills `rust-engineering-guardrails` and `f
 | **Deep-refactor** | Architecture, boundaries, ownership or ABI migration | ADR, consumer map, staged migration, compatibility plan, independent reviewer |
 
 Combine a mode with a profile, e.g. *"audit with the `native-ui` profile"*. Example prompts live in [`examples/AGENT_PROMPTS.md`](examples/AGENT_PROMPTS.md).
+
+## Safety Intelligence (skill v1.3.0)
+
+Use the [safety workflow](references/safety-intelligence.md) to map resources and
+boundaries, review [function effects](references/function-contracts.md), inspect
+[initialization/invalidation](references/initialization-invalidation.md) and plan
+[incremental adoption](references/safety-adoption.md). Templates record current
+binary/contract identities and evidence for lifetime, invalidation, initialization,
+bounds and thread safety, including unknowns, exceptions and lost coverage.
+
+This is agent guidance with C++17 examples, preserving all 14 rails and four
+modes. It does not add semantic analysis or new `safety` CLI commands. Optional
+Clang/LLVM, Fil-C and scpptool work is explicitly separated from implemented
+capabilities. Passing tools is not a whole-project memory-safety guarantee.
 
 ## Install the skill
 
@@ -50,9 +69,14 @@ Keep the **whole folder** and place it in the skills directory your agent reads:
 
 For teams, keep one versioned copy and symlink it where the agent supports symlinks. The modes and references work as plain instructions even if the CLI is never built.
 
-## Build the optional CLI (C++17)
+## Build the optional CLI (C++23)
 
-Requirements: a C++17 compiler and CMake 3.16+. The concept fixtures need a C++20-capable compiler.
+Requirements: CMake 3.20+ and a compiler/STL able to build the tools in C++23 mode.
+The default tool build requires C++23, with no silent fallback. This does not
+upgrade the projects being audited or imply full C++23 conformance. Local
+validation used MSVC 19.51.36260.0 and CMake 4.3, whose generated C++23 flag is
+`/std:c++latest`. See [standard/toolchain upgrade notes](references/language-standard-upgrades.md)
+for the C++26 development status, platform limits and lower-standard fixtures.
 
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON

@@ -1,6 +1,13 @@
-# cpp-rails · Native C++17 audit / verification CLI
+# cpp-rails · Native C++23 audit / verification CLI
 
-This is **real C++17 source code**, not a proposal or shell wrapper. Build it with CMake. It has **no external C++ library dependencies**. It invokes CMake/CTest and optionally compiler/lint/sanitizer/ABI tools already installed on the machine; no Rust/Python source or runtime is used.
+The CLI and runners build as **C++23**, with CMake 3.20+ and no external C++
+library dependencies. They invoke CMake/CTest and optionally compiler/lint/
+sanitizer/ABI tools already installed on the machine; no Rust/Python source or
+runtime is used. The explicitly lower-standard safety/concept fixtures remain
+C++17/C++20. The tool's build standard does not change target-project standards
+or the standalone `--std` default (`c++20`). See
+[language-standard-upgrades.md](../../references/language-standard-upgrades.md)
+for actual MSVC/CMake flag selection and C++26 limitations.
 
 ## Build / test
 
@@ -58,8 +65,19 @@ The `--source` template check is a **standalone compiler invocation**, without t
 | Optional ABI check using `abidiff` | Implemented where installed |
 | Lifetime warnings for a standalone source | Implemented as opt-in best-effort; flags vary and do not prove lifetime safety |
 | Semantic Clang AST data-flow, project-wide race/UB proof, automated online compiler regression lookup | **Not implemented** |
+| Safety Intelligence contract/evidence workflow | Agent guides and manual templates only; no summary validation, property inference or safety-policy parser in the CLI |
 | Source code refactoring, commits, test auto-updates | **Deliberately not implemented** |
 | Python/Rust tool scripts | **None** |
+
+Safety Intelligence guidance lives in
+[`references/safety-intelligence.md`](../../references/safety-intelligence.md).
+The proposed `safety map`, `safety contracts`, `safety boundaries`,
+`safety regressions` and `--safety-profile strict` interfaces are **not
+implemented**. Existing `--strict` only changes treatment of UNVERIFIED gates;
+engineering `--profile` values are not WG21 Safety Profiles. Additional Clang
+diagnostics and MSan require supported project-native commands; there is no
+`--sanitizer msan` mode. The new C++17 safety fixtures validate example behavior
+and compilation, not semantic detection by the scanner.
 
 ## Safety and trust model
 

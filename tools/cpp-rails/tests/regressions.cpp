@@ -19,7 +19,7 @@ int main(int argc,char** argv) {
         try {run();std::cout<<name<<": PASS\n";} catch(const std::exception& e) {++failures;std::cerr<<name<<": FAIL: "<<e.what()<<'\n';}
     };
     test("subprocess drains bounded independent streams",[&] {
-        const auto exe=fs::absolute(fs::u8path(argv[0])).u8string();
+        const auto exe=utf8_bytes(fs::absolute(path_from_utf8(argv[0])).u8string());
         const auto result=exec({exe,"--emit-streams"},temp,true);
         require(result.started&&result.exit_code==0,"dual pipe child did not finish");
         require(result.output==std::string(128*1024,'o')&&result.error_output==std::string(128*1024,'e'),"stream contamination or output cap regression");
@@ -38,18 +38,18 @@ int main(int argc,char** argv) {
         require(escaped.findings.size()==1&&escaped.findings[0].line==4,"escaped characters/continued string changed line accounting");
     });
     test("changed root/subdir UTF-8 untracked rename deletion",[&] {
-        const auto dir=temp/fs::u8path(u8"git ni\u00f1o");fs::create_directories(dir/"src");
+        const auto dir=temp/fs::path(u8"git ni\u00f1o");fs::create_directories(dir/"src");
         auto git=[&](std::vector<std::string> args) {args.insert(args.begin(),"git");auto p=exec(args,dir);require(p.started&&p.exit_code==0,p.output);};
         git({"init","--quiet"});
-        for(const auto& name:{"src/worker.cpp",u8"src/ni\u00f1o.cpp","src/old.cpp","src/deleted.cpp"}) std::ofstream(dir/fs::u8path(name))<<"void f() {}\n";
+        for(const auto& name:std::vector<std::string>{"src/worker.cpp",utf8_bytes(u8"src/ni\u00f1o.cpp"),"src/old.cpp","src/deleted.cpp"}) std::ofstream(dir/path_from_utf8(name))<<"void f() {}\n";
         git({"add","."});git({"-c","user.name=Fixture","-c","user.email=fixture@example.invalid","commit","--quiet","-m","fixture"});
         git({"config","core.autocrlf","true"}); // Git warns on stderr for modified LF files.
-        for(const auto& name:{"src/worker.cpp",u8"src/ni\u00f1o.cpp","src/untracked space.cpp"}) std::ofstream(dir/fs::u8path(name),std::ios::binary)<<"void f(){auto p=new int;delete p;}\n";
+        for(const auto& name:std::vector<std::string>{"src/worker.cpp",utf8_bytes(u8"src/ni\u00f1o.cpp"),"src/untracked space.cpp"}) std::ofstream(dir/path_from_utf8(name),std::ios::binary)<<"void f(){auto p=new int;delete p;}\n";
         git({"mv","src/old.cpp","src/renamed.cpp"});fs::remove(dir/"src/deleted.cpp");
         std::vector<std::string> notes;
         const auto root=changed_paths(dir,&notes), sub=changed_paths(dir/"src");
         require(!notes.empty(),"Git warnings must remain available to humans");
-        require(root.count(u8"src/ni\u00f1o.cpp")==1 && sub.count(u8"ni\u00f1o.cpp")==1,"Unicode root normalization");
+        require(root.count(utf8_bytes(u8"src/ni\u00f1o.cpp"))==1 && sub.count(utf8_bytes(u8"ni\u00f1o.cpp"))==1,"Unicode root normalization");
         require(sub.count("worker.cpp")&&sub.count("untracked space.cpp")&&sub.count("renamed.cpp")&&sub.count("deleted.cpp"),"incomplete change set");
         require(scan(dir/"src",sub).files.size()==4,"changed scan omitted existing files or scanned deleted path");
     });
