@@ -9,6 +9,19 @@ Start by detecting actual build system (CMake, Meson, Bazel, Visual Studio), C++
 - Sanitizer support differs by platform and compiler; use dedicated build directories and report unsupported tools explicitly.
 - Do not run untrusted build scripts without assessing side effects and the user's permissions.
 
+For MSVC semantic analysis, distinguish a real compiler command from a reconstructed
+analysis context. Preserve the selected configuration, platform, VC toolset, SDK,
+standard, CRT, defines and per-file includes. Clang needs its CL driver for MSVC
+options. If the Visual Studio build has no compilation database, use the explicit
+[MSBuild evaluated-context export](../tools/cpp-rails/MSVC.md); ordinary audit does
+not evaluate project files. Unsupported contexts remain UNVERIFIED.
+
+Count `.inc`/`.inl` implementation fragments in the authored-source inventory.
+Analyze them through their actual including translation units rather than inventing
+standalone compiler flags. Separate generated-source exclusions, unreadable files
+and unobserved AST fragments when comparing results or baselines. Include generated
+output explicitly only when reviewing the generator/output itself.
+
 **CMake quick start:**
 ```bash
 cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=Debug

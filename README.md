@@ -1,4 +1,4 @@
-# C++ Engineering Guardrails v1.4.0
+# C++ Engineering Guardrails v1.5.0
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![C++23](https://img.shields.io/badge/tools-C%2B%2B23-blue.svg)
@@ -56,7 +56,13 @@ commands for bounded local lifetime/release/invalidation evidence. Opaque effect
 and unsupported scope remain unknown. Passing tools is not a whole-project
 memory-safety guarantee. See [the CLI guide](tools/cpp-rails/README.md).
 
-## Auditor v1.4
+## Auditor v1.5
+
+v1.5 adds [real MSVC context handling](tools/cpp-rails/MSVC.md), explicit MSBuild
+evaluation for existing Visual Studio projects, generated-code exclusions with
+scope accounting, and `.inc`/`.inl` analysis through their including translation
+units. `--include-generated` restores generated source; repeatable `--exclude`
+patterns narrow scope. Missing compiler/fragment coverage remains UNVERIFIED.
 
 - `audit --score`: six independent quality indicators with evidence and rates.
 - `audit --semantic`: optional real Clang AST; no mandatory LLVM library dependency.

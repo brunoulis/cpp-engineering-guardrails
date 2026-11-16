@@ -12,14 +12,27 @@ std::string encode(const std::string& text) {
 std::string decode(const std::string& text) {
     std::string result;for(std::size_t i=0;i<text.size();++i){if(text[i]=='\\'&&i+1<text.size()){char c=text[++i];result+=c=='t'?'\t':c=='n'?'\n':c=='r'?'\r':c;}else result+=text[i];}return result;
 }
+std::string source_policy_key(const ScanPolicy& policy) {
+    std::set<std::string> patterns;
+    for(auto pattern:policy.excludes) {
+        std::replace(pattern.begin(),pattern.end(),'\\','/');
+        while(pattern.starts_with("./"))pattern.erase(0,2);
+        while(!pattern.empty()&&pattern.back()=='/')pattern.pop_back();
+        if(!pattern.empty())patterns.insert(std::move(pattern));
+    }
+    std::string value;
+    for(const auto& pattern:patterns)value+=std::to_string(pattern.size())+":"+pattern;
+    return make_id("source-policy-v1",policy.include_generated?"generated-included":"generated-excluded",value,0);
+}
 }
 void load_baseline(const fs::path& file,Report& report) {
     const auto data=read_file(file);
     std::istringstream in(data);
-    std::string line,baseline_profile;std::map<std::string,Finding> entries;
+    std::string line,baseline_profile,baseline_source_policy;std::map<std::string,Finding> entries;
     std::map<std::string,std::string> contexts;
     while(std::getline(in,line)) {
         line=trim(line);if(line.starts_with("# profile\t")){baseline_profile=line.substr(10);continue;}
+        if(line.starts_with("# source-policy\t")){baseline_source_policy=line.substr(16);continue;}
         if(line.starts_with("# analyzer\t")) {
             const auto tab=line.find('\t',11);if(tab!=std::string::npos)contexts[decode(line.substr(11,tab-11))]=decode(line.substr(tab+1));continue;
         }
@@ -45,7 +58,11 @@ void load_baseline(const fs::path& file,Report& report) {
         const auto context=report.analyzer_contexts.find(f.analyzer), previous=contexts.find(f.analyzer);
         const bool backend_complete=report.completed_analyzers.count(f.analyzer)&&context!=report.analyzer_contexts.end()&&previous!=contexts.end()&&context->second==previous->second;
         const bool file_observed=report.scanned_paths.count(f.path)!=0||(f.analyzer=="cmake-codemodel"&&backend_complete);
-        const bool deleted=report.scan_complete&&!f.path.empty()&&!fs::exists(path_from_utf8(report.root)/path_from_utf8(f.path));
+        // Once a file is deleted its former leading generated banner cannot be
+        // inspected. Resolve deletion only when both runs recorded the same scope.
+        const bool same_source_policy=!baseline_source_policy.empty()&&baseline_source_policy==source_policy_key(report.scan_policy);
+        const bool deleted=report.scan_complete&&same_source_policy&&!f.path.empty()&&scan_path_exclusion(f.path,report.scan_policy).empty()
+            &&!fs::exists(path_from_utf8(report.root)/path_from_utf8(f.path));
         const bool same_profile=baseline_profile.empty()||baseline_profile==report.profile;
         const bool observable=(file_observed||deleted)&&report.findings_capped==0&&(lexical||backend_complete)&&same_profile;
         if(observable)report.delta.resolved.push_back(f);else {++report.delta.unobserved;report.delta.unobserved_entries.push_back(f);}
@@ -58,6 +75,7 @@ void write_baseline(const fs::path& file,const Report& report) {
     for(auto& f:report.findings)sorted.push_back(&f);
     std::sort(sorted.begin(),sorted.end(),[](auto a,auto b){return a->id<b->id;});
     std::ostringstream out;out<<"# cpp-rails baseline v2 — manually review; id/path/rule/analyzer/level/severity/line/evidence\n# profile\t"<<report.profile<<'\n';
+    out<<"# source-policy\t"<<source_policy_key(report.scan_policy)<<'\n';
     for(const auto& [analyzer,context]:report.analyzer_contexts)out<<"# analyzer\t"<<encode(analyzer)<<'\t'<<encode(context)<<'\n';
     for(auto f:sorted) {
         for(const auto& field:{f->id,f->path,f->rule,f->analyzer,f->evidence_level,f->severity})
