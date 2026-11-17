@@ -22,6 +22,12 @@ standalone compiler flags. Separate generated-source exclusions, unreadable file
 and unobserved AST fragments when comparing results or baselines. Include generated
 output explicitly only when reviewing the generator/output itself.
 
+## Effective dependency and artifact selection
+
+When vcpkg is used, record its selected revision/builtin baseline, manifest and resolved versions, target/host triplets, overlays, overrides and local patches with reasons. Compare these with the actual CMake cache/toolchain, imported target include/link paths and configuration-specific binaries; a manifest or lock alone does not prove selection. Apply the same evidence discipline to other package managers without adding vcpkg to projects that do not use it.
+
+Trace source/dependency revisions → effective build configuration (architecture, compiler, standard library, CRT, defines) → built/linked/runtime-loaded artifacts → test consumer and release package. Record identities such as hashes or build IDs, not filename equality. A Debug consumer cannot verify a different Release DLL; unresolved selection or stale identity remains UNVERIFIED. For distributed products, attach SBOM/provenance/signing only when required by product or policy. A local edit without distribution records N/A and its reason in [report.md](../templates/report.md).
+
 **CMake quick start:**
 ```bash
 cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=Debug

@@ -186,4 +186,4 @@ alternatives and required evidence; the CLI never edits target code.
 
 ## Mandatory handoff
 
-For nontrivial tasks: **scope → findings/decisions → files/diffs → verification matrix → status of skipped gates → compatibility/security/performance evidence → independent review status → next steps**. Use `templates/report.md`; deep migrations also require `templates/adr.md` and `templates/refactor-plan.md`.
+For nontrivial tasks, use [templates/report.md](templates/report.md): base/candidate identity → changed files, behavior, consumers and state lifecycle → first/current solution and review dispositions → effective verification matrix → applicable distribution evidence → risks and next steps. Separate built, tested, integrated and release-validated evidence; absent or skipped checks never establish PASS. Trivial changes may use a compact handoff covering the same applicable facts, with justified N/A. Deep migrations also require `templates/adr.md` and `templates/refactor-plan.md`.

@@ -21,3 +21,9 @@ For every thread, task, future, callback, scheduler and external resource, answe
 - Shutdown while callbacks are pending; slow consumer; producer burst; cancellation during I/O; exceptions during task completion.
 - Repeat under TSan in a separate build on supported platforms and run deterministic interleaving/unit tests when possible.
 - Record p95/p99, queue occupancy and dropped-work counts only when using real workloads; performance is not synonymous with avoiding mutexes.
+
+## Logging and blocking context
+
+Investigate per-event or loop logging using enabled level/feature, trigger frequency, formatting/allocation and sink cost, attacker-controlled volume, queue bounds and backpressure. Record workload and measured frequency/cost, or explicitly UNMEASURED. A loop log is a signal for review, not proof of a hot-path regression: rare, diagnostic-only or throttled logging can be legitimate. Do not impose universal limits or sample away required critical events.
+
+For blocking work, identify the reachable execution context, wait duration and cancellation/shutdown effects. Blocking a runtime/event-loop thread may be harmful; work already isolated in a bounded worker may be appropriate. Confirm placement and relevant measurements before prescribing a pool, async rewrite or native migration. Record the trigger, consequence and diff attribution through [reviewer-protocol.md](reviewer-protocol.md).

@@ -14,3 +14,11 @@ The reviewer must challenge the implementation *without merely paraphrasing the 
 **Stop conditions:** unexpected test failures, confirmed UB/races, silent public API/ABI breaks, contradictory assumptions, no rollback for major migration. A suggestion without evidence is not a blocker unless policy explicitly requires it.
 
 **Reviewer output:** approval/block with reasons; findings; residual risks; requested tests; dispute resolution notes. Prefer small, actionable evidence rather than vague praise or blanket rejection.
+
+## Triage and accumulated changes
+
+Record each finding's trigger, observable consequence, evidence/confidence and relation to the diff: introduced regression, pre-existing debt, or unknown attribution. Inspect unchanged context to establish the mechanism; proximity to a changed line and a Critical label do not prove a regression. Keep unrelated debt separate without requiring its repair as part of this patch.
+
+Resolve each finding as **corrected/verified**, **legitimate use**, **accepted in-scope limit**, or **investigation pending**, with reason and evidence in [report.md](../templates/report.md). Missing reproduction is pending evidence, not proof that a concern is false. Do not approve an unmet required gate by accepting a limit informally.
+
+Compare the first solution with the candidate: states, dependencies, abstractions, lifecycle rules and interactions added during review. New state triggers proportional reconsideration, not automatic rejection: establish necessity, owner, invalidation and closure. Reconsider flags/timers/caches added to repair earlier patches against simplification or a local fix; no universal LOC/growth threshold. Preserve justified state and legitimate runtime/logging counterexamples. Escalate only decisions outside authorized scope or requiring the user's choice.

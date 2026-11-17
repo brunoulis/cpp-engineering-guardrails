@@ -11,3 +11,5 @@ A code smell is a *hypothesis*, not an instruction to rewrite. Before each chang
 - **Verification:** protect behavior through characterisation tests, staged patches, a baseline diff and code review; include performance gates only when measurable impact is expected.
 
 Deliver: issue → evidence → option comparison → change plan → steps → regression matrix → rollback. No automated large reformatting without request.
+
+Use [report.md](../templates/report.md) to connect each file/reason to affected behavior, consumers, state ownership/closure and verification. Compare the first solution and current candidate, including complexity accumulated through review; necessary new state is permitted with a justified lifecycle. Record review attribution and dispositions, effective configurations, counts and freshness using [reviewer-protocol.md](../references/reviewer-protocol.md) and [quality-gate-matrix.md](../templates/quality-gate-matrix.md). Mark inaccessible consumers and unexecuted variants UNVERIFIED; a trivial edit may report applicable facts compactly with justified N/A.

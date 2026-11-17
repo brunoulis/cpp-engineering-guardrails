@@ -17,5 +17,9 @@ Use test matrices where it matters: GCC/Clang/Linux; MSVC/Windows; Apple Clang/m
 
 **Exit statuses:** `0` means no requested *mandatory* failed/unverified gate (audit scan is not proof); `1` means gate FAILED; `2` means input/error or mandatory gate UNVERIFIED. A check without tests because none exist must not appear green.
 
+These are the guardrails checker's statuses, not a translation of every native runner's exit codes. Preserve each native command's actual exit/status in evidence.
+
+Use `ctest --test-dir build --output-on-failure --no-tests=error` for direct CTest calls (add `-C <configuration>` when needed). Confirm a deliberately nonexistent selector fails, separately from the normal suite. This closes empty selection only: inspect fresh results/counts for skips, disabled tests and internal subcases. Keep the CLI's existing structured `ctest_gate`; do not replace it with exit-code-only checks. See [quality-gate-matrix.md](../templates/quality-gate-matrix.md) for selected/executed counts, configuration/artifact identity and freshness. A configured CI matrix is not evidence that its hosted jobs ran.
+
 ## Avoid 'fake green'
 Never update snapshots, fixtures, mocks or expected results solely to mask behavior changes. Preserve old contracts or explicitly authorize and document a migration. A negative compile test passes only for its expected reason. Separate true defects and improvement suggestions.

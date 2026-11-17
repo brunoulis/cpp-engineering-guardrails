@@ -20,7 +20,7 @@ jobs:
       - name: Build native CLI and fixtures
         run: cmake --build build --parallel 2
       - name: Run CTest (includes negative compiler fixture)
-        run: ctest --test-dir build --output-on-failure
+        run: ctest --test-dir build --output-on-failure --no-tests=error
       - name: Save labeled precision and self-audit evidence
         run: |
           build/tools/cpp-rails/cpp-rails-corpus tests/corpus corpus-results.json
@@ -38,7 +38,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=23
       - run: cmake --build build --parallel 2
-      - run: ctest --test-dir build --output-on-failure
+      - run: ctest --test-dir build --output-on-failure --no-tests=error
   windows-msvc:
     runs-on: windows-latest
     steps:
@@ -49,4 +49,4 @@ jobs:
       # Use the initialized MSVC toolchain without requiring a specific VS IDE.
       - run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=23 -DCMAKE_CXX_COMPILER=cl -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCPP_RAILS_REQUIRE_CLANG_TESTS=ON
       - run: cmake --build build --parallel 2
-      - run: ctest --test-dir build --output-on-failure
+      - run: ctest --test-dir build --output-on-failure --no-tests=error
