@@ -111,6 +111,12 @@ failing path or a whole-program safety proof.
   User destructors are outside this model because they can change pointer aliases.
 - `SEM-INVALIDATED-VIEW`: a modeled standard view's element access follows
   `std::vector::clear` on its local owner in the modeled straight-line scope.
+- `SEM-DISCARDED-LOCK-GUARD` reports a standalone temporary `std::lock_guard` or
+  nonempty `std::scoped_lock` followed by another statement in the same block.
+  The temporary releases its mutexes at the semicolon. A named guard can cover
+  subsequent work when the locking contract requires it. The check follows
+  direct construction and leaves deliberate void casts and compound expressions
+  to review.
 
 Opaque wrappers/calls, unmodeled aliases/mutations, exceptions/branches,
 cross-translation-unit effects, concurrency, allocator protocols, ownership

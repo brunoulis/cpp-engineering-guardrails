@@ -245,6 +245,34 @@ std::string_view msvc_bad() { std::string text = "MSVC STL"; return text; }
     }
     put(database, "[{\"directory\":" + quote(temp.path.generic_string()) + ",\"file\":" + quote(source.generic_string()) + ",\"arguments\":[\"clang++\",\"-std=c++23\"," + quote(source.generic_string()) + "]}]");
 #endif
+    put(source, R"cpp(
+#include <mutex>
+using Guard = std::lock_guard<std::mutex>;
+void work();
+void use(const Guard&);
+void bad_lock(std::mutex& m) { std::lock_guard{m}; work(); }
+void bad_alias(std::mutex& m) { (Guard{m}); work(); }
+void bad_multi(std::mutex& m, std::mutex& n) { std::scoped_lock{m,n}; work(); }
+void bad_parens(std::mutex* m) { Guard(*(m + 0)); work(); }
+void good_named(std::mutex& m) { Guard guard{m}; work(); }
+void good_reference(std::mutex& m) { const auto& guard = Guard{m}; work(); }
+Guard good_return(std::mutex& m) { return Guard{m}; }
+void good_call(std::mutex& m) { use(Guard{m}); work(); }
+void good_comma(std::mutex& m) { (Guard{m}, work()); work(); }
+void good_void(std::mutex& m) { (void)Guard{m}; work(); }
+void good_empty() { std::scoped_lock<>{}; std::scoped_lock<>{std::adopt_lock}; work(); }
+namespace app { struct lock_guard { explicit lock_guard(std::mutex&) {} }; }
+void good_unrelated(std::mutex& m) { app::lock_guard{m}; work(); }
+)cpp");
+    Report locks;
+    analyze_semantic(options, temp.path, {source}, locks);
+    require(passed(locks), "standard mutex guard cases must have real AST coverage");
+    for (const auto expected_line : {6u, 7u, 8u, 9u}) {
+        require(std::ranges::count_if(locks.findings, [&](const auto& f) {
+            return f.rule == "SEM-DISCARDED-LOCK-GUARD" && f.line == expected_line;
+        }) == 1, "each early guard release must be reported at its construction");
+    }
+    require(locks.findings.size() == 4, "valid lock lifetimes and unrelated constructors must stay clear");
     // Model libc++'s conversion-to-alias AST spelling independently of the host
     // standard library. This is a protocol fixture, not a replacement STL.
     put(source, R"cpp(

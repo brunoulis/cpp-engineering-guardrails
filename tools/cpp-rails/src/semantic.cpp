@@ -804,7 +804,7 @@ struct Analysis {
         }
         return {};
     }
-    void visit_body(const Json& node) {
+    void visit_body(const Json& node, bool discarded_before_next_statement = false) {
         if (!spend()) return;
         const auto* requested = source_entry(node);
         if (requested && (node.has("loc") || node.has("range"))) observed_files.insert(requested->first);
@@ -840,6 +840,15 @@ struct Analysis {
         if (k == "BinaryOperator" || k == "CompoundAssignOperator") { ++stats.aliases; views.clear(); }
         if (k == "CallExpr" || k == "CXXOperatorCallExpr") { ++stats.unknown; views.clear(); }
         if (k == "CXXConstructExpr" || k == "CXXTemporaryObjectExpr") {
+            if (discarded_before_next_statement) {
+                const auto guard = type(node);
+                if (std_type(guard, "lock_guard") ||
+                    (std_type(guard, "scoped_lock") && guard.compare(guard.find('<'), 2, "<>") != 0)) {
+                    finding("SEM-DISCARDED-LOCK-GUARD", node,
+                            "Temporary mutex guard releases its lock before the next statement",
+                            "standalone construction of " + guard + " ends at the semicolon; name the guard if subsequent work needs the lock");
+                }
+            }
             if (!view_type(type(node))) ++stats.unknown;
             if (!view_type(type(node)) && !owner_type(type(node))) views.clear();
         }
@@ -848,7 +857,13 @@ struct Analysis {
             auto member = call.empty() ? std::string{} : call[0]["name"].text();
             if (member != "data" && member != "c_str" && !standard_string_view_conversion(node)) { ++stats.unknown; views.clear(); }
         }
-        for (const auto& child : node["inner"].array()) visit_body(child);
+        const auto& children = node["inner"].array();
+        const bool transparent = discarded_before_next_statement && children.size() == 1 &&
+            (k == "ExprWithCleanups" || k == "ParenExpr" || k == "CXXBindTemporaryExpr" ||
+             (k == "CXXFunctionalCastExpr" && node["castKind"].text() == "ConstructorConversion"));
+        for (std::size_t i = 0; i < children.size(); ++i) {
+            visit_body(children[i], transparent || (k == "CompoundStmt" && i + 1 < children.size()));
+        }
     }
     const Json* descendant(const Json& node, const std::string& wanted) {
         if (kind(node) == wanted) return &node;
@@ -992,7 +1007,7 @@ void sections(const Options& options, const Stats& stats, Report& report) {
              << ",\"whole_program_proof\":false,\"ast_input_limit_bytes\":" << max_json_bytes << ",\"per_tu_timeout_seconds\":60}";
     report.sections.push_back({"semantic-coverage", coverage.str(), "Clang AST coverage: " + std::to_string(stats.analyzed) + "/" + std::to_string(stats.selected) + " selected translation units; " + std::to_string(stats.functions) + " functions; " + std::to_string(stats.unknown) + " opaque call boundaries. Whole-program safety remains UNVERIFIED."});
     if (options.safety) {
-        std::string contracts = "{\"scope\":\"intraprocedural\",\"properties\":[{\"id\":\"SEM-DANGLING-VIEW\",\"contract\":\"returned std::string_view/std::span must outlive local automatic storage\"},{\"id\":\"SEM-DELETE-MISMATCH\",\"contract\":\"direct primitive-element local new and delete must use matching array forms\"},{\"id\":\"SEM-DOUBLE-DELETE\",\"contract\":\"straight-line primitive-element local allocation has at most one release\"},{\"id\":\"SEM-INVALIDATED-VIEW\",\"contract\":\"direct view element access must precede vector::clear of its local owner\"}],\"observed_acquisitions\":" + std::to_string(stats.acquisitions) + ",\"observed_releases\":" + std::to_string(stats.releases) + ",\"boundaries\":[\"opaque calls and wrappers\",\"aliases and mutations\",\"exceptions and branches\",\"cross-TU ownership\",\"concurrency\",\"other iterator invalidation\"],\"unsupported_scope\":\"unknown\",\"universal_safety\":\"UNVERIFIED\"}";
+        std::string contracts = "{\"scope\":\"intraprocedural\",\"properties\":[{\"id\":\"SEM-DANGLING-VIEW\",\"contract\":\"returned std::string_view/std::span must outlive local automatic storage\"},{\"id\":\"SEM-DELETE-MISMATCH\",\"contract\":\"direct primitive-element local new and delete must use matching array forms\"},{\"id\":\"SEM-DOUBLE-DELETE\",\"contract\":\"straight-line primitive-element local allocation has at most one release\"},{\"id\":\"SEM-DISCARDED-LOCK-GUARD\",\"contract\":\"a discarded standard mutex guard releases before the following statement\"},{\"id\":\"SEM-INVALIDATED-VIEW\",\"contract\":\"direct view element access must precede vector::clear of its local owner\"}],\"observed_acquisitions\":" + std::to_string(stats.acquisitions) + ",\"observed_releases\":" + std::to_string(stats.releases) + ",\"boundaries\":[\"opaque calls and wrappers\",\"aliases and mutations\",\"exceptions and branches\",\"cross-TU ownership\",\"concurrency\",\"other iterator invalidation\"],\"unsupported_scope\":\"unknown\",\"universal_safety\":\"UNVERIFIED\"}";
         report.sections.push_back({"safety-contracts", contracts, "Bounded contracts: local view return lifetime; primitive-element direct new/delete form and duplicate release; view element access after local vector::clear. Unknown: opaque calls/wrappers, aliases, mutation, control flow/exceptions, cross-TU ownership, concurrency and other iterator invalidation. A clean result does not prove safety."});
         std::string functions = "{\"fingerprint_algorithm\":\"FNV-1a-64 noncryptographic provenance\",\"functions\":[";
         for (std::size_t i = 0; i < stats.function_summaries.size(); ++i) { if (i) functions += ','; functions += stats.function_summaries[i]; }
