@@ -1,0 +1,9 @@
+id	task	repetition	revision	author	acceptance	regression	copy_only	seconds	input_tokens	cached_input_tokens	output_tokens	total_tokens	commands	command_output_chars	guidance_returned	patch_sha256
+5fc2d778b6a545e8b7ce0fe8621aa561	move-only-join	1	lean	completed	pass	pass	pass	218	450171	397952	7632	457803	12	85354	True	1c31edc6ebb19f8e37c08943e36a6e83afaab76081917c2308c6ea667783ec4c
+acfa844de20f48ca9d9ba412434f3be8	move-only-join	1	confirm-old	completed	pass	pass	fail-compile	172	302394	265472	5413	307807	10	340126	True	37698e6fe86435c66734b6e4eedd6afd60c4a4b3cd60caeba9ca221df3dd0852
+4f475f3b062b4190aca0ee1c04038fe1	move-only-join	2	confirm-old	completed	pass	pass	fail-compile	180	424800	343680	5542	430342	14	377816	True	6bd263ba2fa42b24ce69e731fcd62060d52fbfa3b05dbfd88cb37bbc50642b23
+3237cf8adda141ecaf824c755d2866a1	move-only-join	2	lean	completed	pass	pass	pass	192	443628	397824	7112	450740	11	102101	True	d6c30c279baf9c0c9897396f2b5b572ef94914a58dcba75ba0b8de7cc5b85792
+8b010a9d76eb4782a223480c3b5f5e15	locale-abi	1	confirm-old	completed	pass	pass	NA	198	703518	637824	5859	709377	18	239965	True	9a11ac56caa698b4c16e783fe3c6708c23d0d6f2a1a86c568045ec04e6bd3644
+8d08d47e327b47b0a48644e9e26d1b87	locale-abi	1	lean	completed	pass	pass	NA	163	551700	457216	4787	556487	17	107505	True	a017ae1c1708c06ab7ffddf58b07f57a79b1e7a4c4ebc56e9a5f8ea041530d4d
+169a1c4cc1524a99a757fa8a3f9e55aa	const-buffer	1	lean	completed	pass	pass	NA	77	170225	146944	2334	172559	9	58804	True	07147b0ab14b7e73c6aadba882b48f33d37b839d00d2fdbe26765f61e906612a
+72f9407083bc4871bb804d338e4df2c8	const-buffer	1	confirm-old	completed	pass	pass	NA	90	307504	266240	2521	310025	23	494236	True	07147b0ab14b7e73c6aadba882b48f33d37b839d00d2fdbe26765f61e906612a

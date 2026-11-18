@@ -20,6 +20,8 @@ metadata:
 
 # C++ engineering guardrails
 
-Use the target's actual compiler, standard and callers. Preserve ownership, borrow validity and observable state on failure. Build and test the affected paths. Read related source together and expand check output on failure.
+For a fix, search once for the symbol, its caller and its test. Read the matching regions together. Preserve ownership, borrow validity and observable failure behavior. When extending a template, keep its old minimum type requirements: copying may be valid even when moving is explicitly deleted.
 
-Consult the relevant section for [lifetime and iterator invalidation](references/memory-lifetime-ub.md) or [ABI and FFI](references/api-abi-ffi.md). Compiler audits include authored .inc/.inl files; use `--include-generated` for intentional generated coverage. See [MSVC context](tools/cpp-rails/MSVC.md) for evaluated targets. For audits, migrations, performance or wider refactors, select the workflow in the [engineering guide](engineering-guide.md). Audit read-only unless edits are requested. Report behavior, actual checks and material limits.
+Use the target compiler and standard. Exercise the reported failure and the existing caller most exposed by the change, then run the nearest regression target. Capture verbose output to a file; surface the exit status, test count or first diagnostic. Once these checks pass on the final patch, report the result. Rebuild or widen the test selection only for a changed input, a required project check or a concrete uncovered risk.
+
+Consult [lifetimes](references/memory-lifetime-ub.md) or [ABI/FFI](references/api-abi-ffi.md) for an unresolved boundary. Use the [engineering guide](engineering-guide.md) for audits, migrations, performance and wider refactors. Audit read-only unless edits are requested. Compiler audits cover authored .inc/.inl files; see `--include-generated` and [MSVC context](tools/cpp-rails/MSVC.md) for additional scope.

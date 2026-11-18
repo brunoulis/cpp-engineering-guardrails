@@ -1,0 +1,13 @@
+id	task	repetition	revision	author	acceptance	regression	copy_only	seconds	input_tokens	cached_input_tokens	output_tokens	total_tokens	commands	command_output_chars	guidance_returned	patch_sha256
+f843658e123b4455a530d85aa593d3d5	move-only-join	1	previous	completed	pass	pass	fail-compile	160	357503	324736	5420	362923	13	380589	True	39b549e77895d1f9528699f2d7569cfb206f20636cf18dc022a17f7ba6cafc0e
+756de6f9c7544ac293f2635e087bf12b	move-only-join	1	candidate	completed	pass	pass	pass	193	311736	261888	6714	318450	10	73163	True	9265c13800a243686fa373a33ea06b49435b3e0b4c58ff68e6a79ac3d2bd4ed0
+2677415bfc4b44dc9358d89ba2877201	move-only-join	2	candidate	timeout	NA	NA	NA	300	NA	NA	NA	NA	22	86277	True	90b0ac73ea0cc185ec9fc47bf04bf016c6c85b24cb1c18f34acf186840b03dab
+38d40759e26b47a6aea5d5c42448d67d	move-only-join	2	previous	completed	pass	pass	fail-compile	202	430643	386816	6170	436813	18	412586	True	49d8fff33db932e937cf6fbd7390c52df8b30d280ab51e5d2aaaca756ee8c0dc
+068809c67ca24f5aaf496297c0de776d	locale-abi	1	candidate	completed	pass	pass	NA	199	471692	393600	6092	477784	29	108179	True	58e7e7fdf41504c5d2c619fe3621006cf1caa9a581c2651eb25b926563965bdf
+8e356d41ebc74badbdbb275af0407664	locale-abi	1	previous	completed	pass	pass	NA	231	602227	553856	6513	608740	22	175834	True	0cd736a689d82b7e89baf520e6a2c48b26bd25763022f10ff841c2ecffff3f73
+053ca82b02f94d21b23677b2aa74a68f	locale-abi	2	previous	completed	pass	pass	NA	206	543925	497536	6057	549982	17	173686	True	b0d7f59be749e983d595f2d24b89fcb7259b0d72470271be1166a80426d2dce8
+bd20d5a2504545ec9f0fa0d3103b54b6	locale-abi	2	candidate	completed	pass	pass	NA	169	429233	384384	4865	434098	12	96123	True	afff2ebee778fcdd86a119f360b725768312795a4a35f32eeb5af9c6b1c009b6
+6375a6c9b78648dea095697cc0b72ad7	const-buffer	1	previous	completed	pass	pass	NA	71	208225	150272	2007	210232	14	500023	True	07147b0ab14b7e73c6aadba882b48f33d37b839d00d2fdbe26765f61e906612a
+1f1a2eec114f42daa735606a691e9792	const-buffer	1	candidate	completed	pass	pass	NA	84	166346	139520	2485	168831	10	62423	True	07147b0ab14b7e73c6aadba882b48f33d37b839d00d2fdbe26765f61e906612a
+52f1e99d55134cbbad4c70e36059bf11	const-buffer	2	candidate	completed	pass	pass	NA	189	240913	230016	2812	243725	11	62086	True	07147b0ab14b7e73c6aadba882b48f33d37b839d00d2fdbe26765f61e906612a
+e38bf231bab64da7b3e1f643c8efb41f	const-buffer	2	previous	completed	pass	pass	NA	75	230592	187136	2165	232757	13	555105	True	07147b0ab14b7e73c6aadba882b48f33d37b839d00d2fdbe26765f61e906612a

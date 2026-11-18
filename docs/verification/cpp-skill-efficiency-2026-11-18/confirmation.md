@@ -1,0 +1,9 @@
+# Comprobación del ajuste de cierre
+
+La sesión de la primera candidata con id `2677415bfc4b44dc9358d89ba2877201` agotó los 300 segundos. Su traza registra pruebas, una compilación limpia adicional y otra comprobación del diff. No hay telemetría final para contabilizar sus tokens. Se conserva la primera ronda completa, incluido el parche parcial.
+
+Se hará una segunda y última ronda con la misma guía de partida y una revisión que explicita cuándo terminar y cuándo ampliar la verificación. Se mantiene la observación sobre los requisitos de tipos genéricos. SHA-256 del nuevo `SKILL.md` tal como se entregó al agente y se archivó: `f6a7786807345f3de4738ac23b987769c53adc1eebd212c526fea4d1284307e4`. Al normalizar los finales de línea a LF, como hace Git en el repositorio, el SHA-256 es `c4274d66538ab874fe3b838714e69bc0c5ec4447050f02a4869672c275124b5e`.
+
+Se asignan ocho sesiones nuevas a cuatro pares contemporáneos. Se repite dos veces `move-only-join` porque concentra el riesgo de compatibilidad. `const-buffer` y `locale-abi` se ejecutan una vez por guía. En la primera repetición comienza la revisión nueva en iteradores y la anterior en ABI; en buffer empieza la nueva. En la segunda de iteradores comienza la anterior. Cada revisión abre dos pares. Se conservan modelo, esfuerzo, presupuesto, prompts y evaluador. Se inicia esta ronda tras terminar la adquisición y la evaluación de la primera.
+
+Para adoptar la segunda candidata se exigirán cuatro entregas completas por revisión, menos tokens agregados de entrada y salida que la guía anterior en estos mismos cuatro pares, aceptación y regresión verdes en las cuatro entregas candidatas y una mejora en el consumidor adicional de iteradores. Los resultados se informarán por separado para ambas rondas. La selección de tareas y la escasa replicación limitan la generalización.
