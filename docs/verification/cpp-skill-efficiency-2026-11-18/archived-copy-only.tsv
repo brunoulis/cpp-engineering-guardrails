@@ -1,0 +1,5 @@
+source	id	revision	repetition	copy_only	diagnostic
+first-pilot	f4c5381d075345e29a2837a3a10a4d83	control	1	fail-compile	MSVC C2280: Cursor::Cursor(Cursor&&)
+first-pilot	cf0a46536d3e411da9e4a93b21ed3486	skill	1	fail-compile	MSVC C2280: Cursor::Cursor(Cursor&&)
+first-pilot	aeabae9118e04b5b8dc15bcdd693f788	skill	2	fail-compile	MSVC C2280: Cursor::Cursor(Cursor&&)
+first-pilot	8c647f17436d489aba0d4e35c4659f7d	control	2	fail-compile	MSVC C2280: Cursor::Cursor(Cursor&&)
